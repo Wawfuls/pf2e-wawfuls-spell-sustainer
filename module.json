@@ -1,7 +1,7 @@
 {
   "id": "pf2e-wawfuls-spell-sustainer",
   "title": "PF2e Wawful's Spell Sustainer",
-  "description": "Adds robust sustained spell tracking, reminders, and effect linking for PF2e in Foundry VTT.",
+  "description": "Adds sustained spell tracking, reminders, and effect linking for PF2e in Foundry VTT.",
   "version": "0.1.0",
   "compatibility": {
     "minimum": "11",
@@ -9,8 +9,8 @@
   },
   "authors": [
     {
-      "name": "Your Name",
-      "url": "https://github.com/yourusername"
+      "name": "Wawfuls",
+      "url": "https://github.com/Wawfuls/pf2e-wawfuls-spell-sustainer"
     }
   ],
   "esmodules": [
@@ -30,9 +30,9 @@
       "package": "pf2e-wawfuls-spell-sustainer"
     }
   ],
-  "url": "https://github.com/yourusername/pf2e-wawfuls-spell-sustainer",
-  "manifest": "https://github.com/yourusername/pf2e-wawfuls-spell-sustainer/releases/latest/download/module.json",
-  "download": "https://github.com/yourusername/pf2e-wawfuls-spell-sustainer/releases/latest/download/pf2e-wawfuls-spell-sustainer.zip",
+  "url": "https://github.com/Wawfuls/pf2e-wawfuls-spell-sustainer/pf2e-wawfuls-spell-sustainer",
+  "manifest": "https://github.com/Wawfuls/pf2e-wawfuls-spell-sustainer/pf2e-wawfuls-spell-sustainer/releases/latest/download/module.json",
+  "download": "https://github.com/Wawfuls/pf2e-wawfuls-spell-sustainer/pf2e-wawfuls-spell-sustainer/releases/latest/download/pf2e-wawfuls-spell-sustainer.zip",
   "license": "MIT",
   "readme": "README.md"
 } 
