@@ -1,0 +1,9 @@
+{
+  "MODULE_NAME": "PF2e Wawful's Spell Sustainer",
+  "REMINDER_TITLE": "Sustained Spells Reminder",
+  "REMINDER_BODY": "You are currently sustaining the following spells:",
+  "SUSTAIN_DIALOG_TITLE": "Sustain a Spell",
+  "SUSTAIN_DIALOG_PROMPT": "Select which spell(s) you wish to sustain this turn:",
+  "EFFECT_SUSTAINING": "Sustaining: {spell}",
+  "EFFECT_SUSTAINED_ON": "Sustained by: {caster}"
+} 
