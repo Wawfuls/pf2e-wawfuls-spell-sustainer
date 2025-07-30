@@ -1,0 +1,45 @@
+name: Release Module
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: get_version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+
+      - name: Update module.json version
+        run: |
+          sed -i 's/"version": ".*"/"version": "${{ steps.get_version.outputs.VERSION }}"/' module.json
+
+      - name: Create zip file
+        run: |
+          zip -r pf2e-wawfuls-spell-sustainer.zip . \
+            -x "*.git*" \
+            -x "*.github*" \
+            -x "*.gitignore" \
+            -x "*.zip"
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+          files: |
+            module.json
+            pf2e-wawfuls-spell-sustainer.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
