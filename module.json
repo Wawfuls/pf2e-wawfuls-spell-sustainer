@@ -30,9 +30,9 @@
       "package": "pf2e-wawfuls-spell-sustainer"
     }
   ],
-  "url": "https://github.com/Wawfuls/pf2e-wawfuls-spell-sustainer/pf2e-wawfuls-spell-sustainer",
-  "manifest": "https://github.com/Wawfuls/pf2e-wawfuls-spell-sustainer/pf2e-wawfuls-spell-sustainer/releases/latest/download/module.json",
-  "download": "https://github.com/Wawfuls/pf2e-wawfuls-spell-sustainer/pf2e-wawfuls-spell-sustainer/releases/latest/download/pf2e-wawfuls-spell-sustainer.zip",
+  "url": "https://github.com/Wawfuls/pf2e-wawfuls-spell-sustainer",
+  "manifest": "https://github.com/Wawfuls/pf2e-wawfuls-spell-sustainer/releases/latest/download/module.json",
+  "download": "https://github.com/Wawfuls/pf2e-wawfuls-spell-sustainer/releases/latest/download/pf2e-wawfuls-spell-sustainer.zip",
   "license": "MIT",
   "readme": "README.md"
 } 
