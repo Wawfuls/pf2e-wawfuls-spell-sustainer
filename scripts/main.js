@@ -1427,6 +1427,12 @@ window.PF2eWawfulsSpellSustainer = {
 if (!globalThis._sustainCleanupHook) {
   globalThis._sustainCleanupHook = Hooks.on('deleteItem', async (item) => {
     try {
+      // Only let the GM handle cleanup to avoid permission issues
+      if (!game.user.isGM) {
+        console.log(`[PF2e Spell Sustainer] Non-GM user skipping cleanup to avoid permission issues`);
+        return;
+      }
+      
       if (item.type !== 'effect' || !item.slug?.startsWith('sustaining-')) return;
       
       const effectUuid = item.uuid;
@@ -1460,13 +1466,18 @@ if (!globalThis._sustainCleanupHook) {
       }
       // Remove children whose sustainedBy.effectUuid matches the deleted effect
       for (const actor of actorSet) {
-        const effects = actor.itemTypes?.effect ?? [];
-        const ids = effects
-          .filter(e => e.flags?.world?.sustainedBy?.effectUuid === effectUuid)
-          .map(e => e.id);
-        if (ids.length) {
-          await actor.deleteEmbeddedDocuments('Item', ids);
-          ids.forEach(id => console.log(`[PF2e Spell Sustainer] Removed linked sustained effect from ${actor.name}`));
+        try {
+          const effects = actor.itemTypes?.effect ?? [];
+          const ids = effects
+            .filter(e => e.flags?.world?.sustainedBy?.effectUuid === effectUuid)
+            .map(e => e.id);
+          if (ids.length) {
+            await actor.deleteEmbeddedDocuments('Item', ids);
+            ids.forEach(id => console.log(`[PF2e Spell Sustainer] Removed linked sustained effect from ${actor.name}`));
+          }
+        } catch (actorError) {
+          console.warn(`[PF2e Spell Sustainer] Could not clean up effects on ${actor.name}:`, actorError);
+          // Continue with other actors even if one fails
         }
       }
     } catch (err) {
