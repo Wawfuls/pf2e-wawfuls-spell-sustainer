@@ -11,6 +11,12 @@ Hooks.once('ready', () => {
 
 // Handle sustained spell casting logic
 async function handleSustainedSpellCast(msg, options, userId) {
+  // Only let the GM handle effect creation to avoid duplicate processing
+  if (!game.user.isGM) {
+    console.log(`[PF2e Spell Sustainer] Non-GM user skipping spell processing to avoid duplicates`);
+    return;
+  }
+  
   console.log(`[PF2e Spell Sustainer] Processing chat message:`, {
     messageId: msg.id,
     speaker: msg.speaker,
