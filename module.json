@@ -2,7 +2,7 @@
   "id": "pf2e-wawfuls-spell-sustainer",
   "title": "PF2e Wawful's Spell Sustainer",
   "description": "Adds sustained spell tracking, reminders, and effect linking for PF2e in Foundry VTT.",
-  "version": "0.2.2",
+  "version": "0.2.3",
   "compatibility": {
     "minimum": "11",
     "verified": "13"
@@ -14,7 +14,7 @@
     }
   ],
   "esmodules": [
-    "scripts/main.js"
+    "scripts/main.js?v=0.2.3"
   ],
   "languages": [
     { "lang": "en", "name": "English", "path": "lang/en.json" }
