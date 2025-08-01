@@ -1,0 +1,39 @@
+{
+  "name": "Needle of Vengeance", 
+  "spellType": "immediate-effects",
+  "targetRequirement": {
+    "type": "exact",
+    "count": 2,
+    "categories": [
+      { "type": "ally", "count": 1 },
+      { "type": "enemy", "count": 1 }
+    ]
+  },
+  "effects": [
+    {
+      "target": "ally",
+      "name": "Needle of Vengeance (Ally)",
+      "slug": "needle-of-vengeance-ally",
+      "description": "You are protected by Needle of Vengeance. The linked enemy will take backlash damage if they attack you.",
+      "duration": { "value": 10, "unit": "rounds", "sustained": false },
+      "level": "castLevel"
+    },
+    {
+      "target": "enemy", 
+      "name": "Needle of Vengeance (Enemy)",
+      "slug": "needle-of-vengeance-enemy",
+      "description": "You are cursed by Needle of Vengeance. You will take backlash damage if you attack the linked ally.",
+      "duration": { "value": 10, "unit": "rounds", "sustained": false },
+      "level": "castLevel"
+    }
+  ],
+  "sustainingEffect": {
+    "name": "Sustaining: Needle of Vengeance",
+    "slug": "sustaining-needle-of-vengeance",
+    "description": "You are sustaining Needle of Vengeance.",
+    "duration": { "value": 1, "unit": "rounds", "sustained": true },
+    "maxSustainRounds": 10,
+    "spellType": "needle-of-vengeance"
+  },
+  "sustainBehavior": "standard"
+}

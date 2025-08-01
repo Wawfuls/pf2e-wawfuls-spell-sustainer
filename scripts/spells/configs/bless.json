@@ -1,0 +1,28 @@
+{
+  "name": "Bless",
+  "spellType": "self-aura",
+  "targetRequirement": {
+    "type": "self-only"
+  },
+  "sustainingEffect": {
+    "name": "Sustaining: Bless",
+    "slug": "sustaining-bless", 
+    "description": "<br/><br/><strong>Current Aura:</strong> 15 Feet<br/><em>Sustaining increases aura size by 10 feet.</em>",
+    "duration": { "value": 10, "unit": "rounds", "sustained": true },
+    "maxSustainRounds": 10,
+    "spellType": "self-aura",
+    "auraCounter": 1,
+    "rules": [
+      {
+        "key": "GrantItem",
+        "uuid": "Compendium.pf2e.spell-effects.Item.RfCEHpMoEAZvB9IZ"
+      }
+    ]
+  },
+  "sustainBehavior": "aura",
+  "aura": {
+    "baseSize": 5,
+    "increment": 10,
+    "maxCounter": 10
+  }
+}

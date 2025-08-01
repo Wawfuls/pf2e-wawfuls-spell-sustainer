@@ -8,8 +8,8 @@ let spellConfigs = null;
 async function loadSpellConfigs() {
   if (!spellConfigs) {
     try {
-      const response = await fetch('./modules/pf2e-wawfuls-spell-sustainer/scripts/spells/spell-configs.json');
-      spellConfigs = await response.json();
+      const { spellConfigs: configs } = await import('./configs/index.js');
+      spellConfigs = configs;
     } catch (error) {
       console.error('[PF2e Spell Sustainer] Failed to load spell configurations:', error);
       spellConfigs = {};

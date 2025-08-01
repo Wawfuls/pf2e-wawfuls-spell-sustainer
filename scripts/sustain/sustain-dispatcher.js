@@ -1,5 +1,5 @@
 // Generic sustain behavior dispatcher
-import spellConfigs from '../spells/spell-configs.json' with { type: 'json' };
+import { spellConfigs } from '../spells/configs/index.js';
 
 export async function dispatchSustainBehavior(spellType, sustainingEffect, caster) {
   console.log(`[PF2e Spell Sustainer] Dispatching sustain behavior for spell type: ${spellType}`);
