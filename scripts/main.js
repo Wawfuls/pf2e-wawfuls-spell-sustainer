@@ -95,25 +95,38 @@ Hooks.on('deleteItem', (item, options, userId) => {
       // Clean up linked effects when sustaining effect is deleted
       const sustainedSpellData = item.flags?.world?.sustainedSpell;
       if (sustainedSpellData) {
-        // Find and remove linked effects
-        const linkedEffects = [];
+        // Comprehensive cleanup: Find and remove linked effects from all actors
+        const effectUuid = item.uuid;
         
-        // Find effects that were sustained by this effect
-        game.actors.forEach(gameActor => {
-          gameActor.itemTypes.effect.forEach(effect => {
-            if (effect.flags?.world?.sustainedBy?.effectUuid === item.uuid) {
-              linkedEffects.push({ actor: gameActor, effect: effect });
+        // Collect all actors: world actors + all token actors on all scenes
+        const actorSet = new Set();
+        for (const a of (game.actors?.contents ?? [])) actorSet.add(a);
+        for (const scn of (game.scenes?.contents ?? [])) {
+          for (const tok of (scn.tokens?.contents ?? [])) {
+            if (tok.actor) actorSet.add(tok.actor);
+          }
+        }
+        
+        // Remove children whose sustainedBy.effectUuid matches the deleted effect
+        let totalRemoved = 0;
+        for (const gameActor of actorSet) {
+          try {
+            const effects = gameActor.itemTypes?.effect ?? [];
+            const ids = effects
+              .filter(e => e.flags?.world?.sustainedBy?.effectUuid === effectUuid)
+              .map(e => e.id);
+            if (ids.length) {
+              await gameActor.deleteEmbeddedDocuments('Item', ids);
+              ids.forEach(id => console.log(`[PF2e Spell Sustainer] Removed linked sustained effect from ${gameActor.name}`));
+              totalRemoved += ids.length;
             }
-          });
-        });
+          } catch (actorError) {
+            console.warn(`[PF2e Spell Sustainer] Could not clean up effects on ${gameActor.name}:`, actorError);
+            // Continue with other actors even if one fails
+          }
+        }
         
-        // Remove linked effects
-        linkedEffects.forEach(async ({ actor: linkedActor, effect }) => {
-          console.log(`[PF2e Spell Sustainer] Removing linked effect ${effect.name} from ${linkedActor.name}`);
-          await effect.delete();
-        });
-        
-        console.log(`[PF2e Spell Sustainer] Removed ${linkedEffects.length} linked effects for ${item.name}`);
+        console.log(`[PF2e Spell Sustainer] Removed ${totalRemoved} linked effects for ${item.name}`);
       }
       
       // Refresh UI elements
