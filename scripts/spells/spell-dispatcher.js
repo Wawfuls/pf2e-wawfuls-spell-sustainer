@@ -135,34 +135,31 @@ async function handleImmediateEffectsSpell(spell, caster, categorizedTargets, ms
   
   const castLevel = extractCastLevel(msg, ctx, spell);
   
-  // Create effects for each configured effect
-  const effectsToCreate = [];
-  const targetData = { allies: [], enemies: [], neutral: [], targets: [] };
-  
-  for (const effectConfig of config.effects) {
-    const targetGroup = categorizedTargets[effectConfig.target];
-    if (!targetGroup || targetGroup.length === 0) continue;
-    
-    for (const target of targetGroup) {
-      const effectData = await createEffectFromConfig(effectConfig, spell, target.actor, caster, castLevel, msg);
-      effectsToCreate.push({ actor: target.actor, effect: effectData });
-      
-      // Store target information
-      targetData.targets.push({
-        id: target.actor.id,
-        name: target.actor.name,
-        uuid: target.actor.uuid,
-        relationship: effectConfig.target
-      });
-      
-      if (effectConfig.target === 'ally') targetData.allies.push(target.actor.name);
-      else if (effectConfig.target === 'enemy') targetData.enemies.push(target.actor.name);
-      else targetData.neutral.push(target.actor.name);
-    }
-  }
-  
-  // Create sustaining effect if configured
+  // Create sustaining effect first if configured
+  let sustainingEffect = null;
   if (config.sustainingEffect) {
+    // Collect target data
+    const targetData = { allies: [], enemies: [], neutral: [], targets: [] };
+    
+    for (const effectConfig of config.effects) {
+      const targetGroup = categorizedTargets[effectConfig.target];
+      if (!targetGroup || targetGroup.length === 0) continue;
+      
+      for (const target of targetGroup) {
+        // Store target information
+        targetData.targets.push({
+          id: target.actor.id,
+          name: target.actor.name,
+          uuid: target.actor.uuid,
+          relationship: effectConfig.target
+        });
+        
+        if (effectConfig.target === 'ally') targetData.allies.push(target.actor.name);
+        else if (effectConfig.target === 'enemy') targetData.enemies.push(target.actor.name);
+        else targetData.neutral.push(target.actor.name);
+      }
+    }
+    
     const sustainingData = await createSustainingEffectFromConfig(
       config.sustainingEffect, 
       spell, 
@@ -172,11 +169,28 @@ async function handleImmediateEffectsSpell(spell, caster, categorizedTargets, ms
       targetData,
       categorizedTargets
     );
-    effectsToCreate.push({ actor: caster, effect: sustainingData });
+    
+    // Create the sustaining effect first
+    const createdEffects = await caster.createEmbeddedDocuments('Item', [sustainingData]);
+    sustainingEffect = createdEffects[0];
+    console.log(`[PF2e Spell Sustainer] Created sustaining effect: ${sustainingEffect.name}`);
   }
   
-  // Apply all effects
-  for (const { actor, effect } of effectsToCreate) {
+  // Now create child effects with proper sustainedBy links
+  const childEffectsToCreate = [];
+  
+  for (const effectConfig of config.effects) {
+    const targetGroup = categorizedTargets[effectConfig.target];
+    if (!targetGroup || targetGroup.length === 0) continue;
+    
+    for (const target of targetGroup) {
+      const effectData = await createEffectFromConfig(effectConfig, spell, target.actor, caster, castLevel, msg, sustainingEffect);
+      childEffectsToCreate.push({ actor: target.actor, effect: effectData });
+    }
+  }
+  
+  // Apply child effects
+  for (const { actor, effect } of childEffectsToCreate) {
     await actor.createEmbeddedDocuments('Item', [effect]);
   }
   
@@ -209,7 +223,7 @@ async function handleSelfAuraSpell(spell, caster, msg, ctx, config) {
 }
 
 // Create effect data from configuration
-async function createEffectFromConfig(effectConfig, spell, targetActor, caster, castLevel, msg) {
+async function createEffectFromConfig(effectConfig, spell, targetActor, caster, castLevel, msg, sustainingEffect = null) {
   return {
     type: 'effect',
     name: effectConfig.name,
@@ -225,7 +239,7 @@ async function createEffectFromConfig(effectConfig, spell, targetActor, caster, 
     },
     flags: {
       world: {
-        sustainedBy: { effectUuid: null }, // Will be updated when sustaining effect is created
+        sustainedBy: { effectUuid: sustainingEffect?.uuid || null },
         sustainedSpell: {
           spellUuid: spell.uuid,
           spellName: spell.name,
