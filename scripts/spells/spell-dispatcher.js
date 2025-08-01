@@ -382,9 +382,9 @@ async function handleMeasuredTemplateSpell(spell, caster, msg, ctx, config) {
   
   console.log(`[PF2e Spell Sustainer] Created sustaining effect for ${spell.name}, template config ready`);
   
-      // Immediately start template placement for initial cast
-    const { handleTemplatedSustain } = await import('../sustain/sustain-templated.js');
-    await handleTemplatedSustain(caster, sustainingEffect, config);
+      // Immediately start template placement for initial cast (no duration increment)
+    const { handleInitialTemplatePlace } = await import('../sustain/sustain-templated.js');
+    await handleInitialTemplatePlace(caster, sustainingEffect, config);
 }
 
 // Note: No generic fallback - only explicitly configured spells get sustaining effects

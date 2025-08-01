@@ -55,9 +55,21 @@ export class PositionedPanelSustainedSpellsIntegration {
       const curRounds = effect.system?.duration?.value || 0;
       const disabled = (sustainedSpellData?.spellType === 'bless') ? false : (curRounds >= maxRounds);
 
-      // Format target information
+      // Format target/template information
       let targetInfo = '';
-      if (sustainedSpellData?.targets && sustainedSpellData.targets.length > 0) {
+      const spellType = sustainedSpellData?.spellType;
+      
+      // Skip target info for aura spells (they show aura size below instead)
+      if (spellType === 'bless' || spellType === 'self-aura') {
+        targetInfo = '';
+      }
+      // Show template info for templated spells
+      else if (sustainedSpellData?.templateConfig) {
+        const template = sustainedSpellData.templateConfig;
+        targetInfo = ` <span style='color: #666'>(${template.distance} ft ${template.type})</span>`;
+      }
+      // Show target info for other spells
+      else if (sustainedSpellData?.targets && sustainedSpellData.targets.length > 0) {
         const allies = sustainedSpellData.allies || [];
         const enemies = sustainedSpellData.enemies || [];
         const neutral = sustainedSpellData.neutral || [];

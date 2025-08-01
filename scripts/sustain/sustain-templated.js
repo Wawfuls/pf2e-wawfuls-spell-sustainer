@@ -1,6 +1,21 @@
 // Generic templated spell sustain behavior
 // Handles template placement and removal when spell is sustained
 
+// Handle initial template placement (no duration increment)
+export async function handleInitialTemplatePlace(caster, sustainingEffect, spellConfig) {
+  const spellName = spellConfig?.name || sustainingEffect.flags?.world?.sustainedSpell?.spellName || 'Unknown Spell';
+  console.log(`[PF2e Spell Sustainer] Handling initial ${spellName} template placement`);
+  
+  const templateConfig = sustainingEffect.flags?.world?.sustainedSpell?.templateConfig;
+  if (!templateConfig) {
+    console.warn(`[PF2e Spell Sustainer] No template config found for ${spellName}`);
+    return;
+  }
+  
+  await placeTemplate(spellName, templateConfig, sustainingEffect);
+}
+
+// Handle template sustain (removes old template, places new one, increments duration)
 export async function handleTemplatedSustain(caster, sustainingEffect, spellConfig) {
   const spellName = spellConfig?.name || sustainingEffect.flags?.world?.sustainedSpell?.spellName || 'Unknown Spell';
   console.log(`[PF2e Spell Sustainer] Handling ${spellName} templated sustain`);
@@ -20,6 +35,20 @@ export async function handleTemplatedSustain(caster, sustainingEffect, spellConf
       await existingTemplate.document.delete();
     }
   }
+  
+  await placeTemplate(spellName, templateConfig, sustainingEffect);
+  
+  // Standard sustain behavior - increment duration by 1 round
+  const maxRounds = sustainingEffect.flags?.world?.sustainedSpell?.maxSustainRounds || 10;
+  const curRounds = sustainingEffect.system?.duration?.value || 0;
+  await sustainingEffect.update({
+    'system.duration.value': Math.min(curRounds + 1, maxRounds),
+    'flags.world.sustainedThisTurn': true
+  });
+}
+
+// Shared template placement logic
+async function placeTemplate(spellName, templateConfig, sustainingEffect) {
   
   // Create new template using Foundry's proper workflow
   console.log(`[PF2e Spell Sustainer] Starting template placement for ${spellName}`);
@@ -99,12 +128,4 @@ export async function handleTemplatedSustain(caster, sustainingEffect, spellConf
   } catch (error) {
     console.error(`[PF2e Spell Sustainer] Failed to start template placement:`, error);
   }
-  
-  // Standard sustain behavior - increment duration by 1 round
-  const maxRounds = sustainingEffect.flags?.world?.sustainedSpell?.maxSustainRounds || 10;
-  const curRounds = sustainingEffect.system?.duration?.value || 0;
-  await sustainingEffect.update({
-    'system.duration.value': Math.min(curRounds + 1, maxRounds),
-    'flags.world.sustainedThisTurn': true
-  });
 }

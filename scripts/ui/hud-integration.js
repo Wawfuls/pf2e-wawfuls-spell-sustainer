@@ -99,6 +99,24 @@ export class PF2eHUDSustainedSpellsIntegration {
       const maxRounds = sustainedSpellData?.maxSustainRounds || 10;
       const curRounds = effect.system?.duration?.value || 0;
       const img = effect.img || 'icons/svg/mystery-man.svg';
+      const spellType = sustainedSpellData?.spellType;
+      
+      // Format name with template/target info
+      let displayName = spellName;
+      
+      // Skip target info for aura spells (they show aura size below instead)
+      if (spellType === 'bless' || spellType === 'self-aura') {
+        // Keep name as is
+      }
+      // Show template info for templated spells
+      else if (sustainedSpellData?.templateConfig) {
+        const template = sustainedSpellData.templateConfig;
+        displayName += ` (${template.distance} ft ${template.type})`;
+      }
+      // Show target count for other spells (only if not already in name)
+      else if (sustainedSpellData?.targets && sustainedSpellData.targets.length > 0 && !spellName.includes('target')) {
+        displayName += ` (${sustainedSpellData.targets.length} target${sustainedSpellData.targets.length > 1 ? 's' : ''})`;
+      }
       
       // For Bless, show aura info
       let statusInfo = '';
@@ -115,7 +133,7 @@ export class PF2eHUDSustainedSpellsIntegration {
 
       return {
         id: effect.id,
-        name: spellName,
+        name: displayName,
         img: img,
         status: statusInfo,
         disabled: atMax,
