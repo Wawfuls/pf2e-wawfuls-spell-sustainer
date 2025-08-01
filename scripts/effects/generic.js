@@ -84,8 +84,16 @@ export async function createSustainedEffects(spell, caster, validTargets, msg, c
   
   effectsToCreate.push({ actor: caster, effect: sustainingEffectData });
   
-  // Apply all effects
-  for (const { actor, effect } of effectsToCreate) {
+  // Create sustaining effect first
+  const sustainingIndex = effectsToCreate.findIndex(({ actor }) => actor.id === caster.id);
+  const sustainingData = effectsToCreate[sustainingIndex];
+  const createdSustainingEffect = await caster.createEmbeddedDocuments('Item', [sustainingData.effect]);
+  const sustainingEffect = createdSustainingEffect[0];
+  
+  // Update child effects to link to the sustaining effect
+  const childEffects = effectsToCreate.filter(({ actor }) => actor.id !== caster.id);
+  for (const { actor, effect } of childEffects) {
+    effect.flags.world.sustainedBy.effectUuid = sustainingEffect.uuid;
     await actor.createEmbeddedDocuments('Item', [effect]);
   }
   
