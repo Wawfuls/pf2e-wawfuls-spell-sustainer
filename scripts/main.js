@@ -569,7 +569,7 @@ async function createNeedleOfVengeanceEffects(spell, caster, ally, enemy, msg, c
     system: {
       slug: `needle-of-vengeance-ally`,
       description: { value: `You are protected by Needle of Vengeance. The linked enemy will take backlash damage if they attack you.` },
-      duration: { value: 10, unit: 'rounds', sustained: true, expiry: 'turn-end' },
+      duration: { value: 10, unit: 'minutes', sustained: false, expiry: 'turn-end' },
       start: { value: game.combat ? game.combat.round : 0, initiative: null },
       level: { value: castLevel }
     },
@@ -596,7 +596,7 @@ async function createNeedleOfVengeanceEffects(spell, caster, ally, enemy, msg, c
     system: {
       slug: `needle-of-vengeance-enemy`,
       description: { value: `You are cursed by Needle of Vengeance. You will take backlash damage if you attack the linked ally.` },
-      duration: { value: 10, unit: 'rounds', sustained: true, expiry: 'turn-end' },
+      duration: { value: 10, unit: 'minutes', sustained: false, expiry: 'turn-end' },
       start: { value: game.combat ? game.combat.round : 0, initiative: null },
       level: { value: castLevel }
     },
@@ -703,7 +703,7 @@ async function createForbiddingWardEffects(spell, caster, ally, enemy, msg, ctx)
     system: {
       slug: `forbidding-ward-ally`,
       description: { value: `You are protected by a Forbidding Ward against the linked enemy.` },
-      duration: { value: 1, unit: 'rounds', sustained: true, expiry: 'turn-end' },
+      duration: { value: 10, unit: 'minutes', sustained: false, expiry: 'turn-end' },
       start: { value: game.combat ? game.combat.round : 0, initiative: null },
       level: { value: castLevel },
       rules: [
@@ -729,8 +729,7 @@ async function createForbiddingWardEffects(spell, caster, ally, enemy, msg, ctx)
           spellName: spell.name,
           casterUuid: caster.uuid,
           createdFromChat: msg.id,
-          spellType: 'forbidding-ward-ally',
-          sustainRounds: 1 // Track how many rounds this has been sustained
+          spellType: 'forbidding-ward-ally'
         }
       }
     }
@@ -745,7 +744,7 @@ async function createForbiddingWardEffects(spell, caster, ally, enemy, msg, ctx)
     system: {
       slug: `forbidding-ward-enemy`,
       description: { value: `You are hindered by a Forbidding Ward protecting the linked target.` },
-      duration: { value: 1, unit: 'rounds', sustained: true, expiry: 'turn-end' },
+      duration: { value: 10, unit: 'minutes', sustained: false, expiry: 'turn-end' },
       start: { value: game.combat ? game.combat.round : 0, initiative: null },
       level: { value: castLevel }
     },
@@ -757,8 +756,7 @@ async function createForbiddingWardEffects(spell, caster, ally, enemy, msg, ctx)
           spellName: spell.name,
           casterUuid: caster.uuid,
           createdFromChat: msg.id,
-          spellType: 'forbidding-ward-enemy',
-          sustainRounds: 1 // Track how many rounds this has been sustained
+          spellType: 'forbidding-ward-enemy'
         }
       }
     }
@@ -860,45 +858,8 @@ async function handleForbiddingWardSustain(sustainingEffect, caster) {
     'flags.world.sustainedThisTurn': true
   });
   
-  // Find and update the target effects to add 1 round
-  const allyTargetId = sustainedSpellData?.allyTargetId;
-  const enemyTargetId = sustainedSpellData?.enemyTargetId;
-  
-  if (allyTargetId) {
-    const allyActor = game.actors.get(allyTargetId);
-    if (allyActor) {
-      const allyEffect = allyActor.itemTypes.effect.find(e => 
-        e.slug === `forbidding-ward-ally`
-      );
-      if (allyEffect) {
-        const allyRounds = allyEffect.system?.duration?.value || 1;
-        const sustainRounds = allyEffect.flags?.world?.sustainedSpell?.sustainRounds || 1;
-        await allyEffect.update({
-          'system.duration.value': allyRounds + 1,
-          'flags.world.sustainedSpell.sustainRounds': sustainRounds + 1
-        });
-        console.log(`[PF2e Spell Sustainer] Added 1 round to Forbidding Ward ally effect on ${allyActor.name}`);
-      }
-    }
-  }
-  
-  if (enemyTargetId) {
-    const enemyActor = game.actors.get(enemyTargetId);
-    if (enemyActor) {
-      const enemyEffect = enemyActor.itemTypes.effect.find(e => 
-        e.slug === `forbidding-ward-enemy`
-      );
-      if (enemyEffect) {
-        const enemyRounds = enemyEffect.system?.duration?.value || 1;
-        const sustainRounds = enemyEffect.flags?.world?.sustainedSpell?.sustainRounds || 1;
-        await enemyEffect.update({
-          'system.duration.value': enemyRounds + 1,
-          'flags.world.sustainedSpell.sustainRounds': sustainRounds + 1
-        });
-        console.log(`[PF2e Spell Sustainer] Added 1 round to Forbidding Ward enemy effect on ${enemyActor.name}`);
-      }
-    }
-  }
+  // Note: Child effects on allies/enemies have full duration and don't need updating
+  // Only the sustaining effect on the caster tracks rounds
 }
 
 // Handle Bless sustain - increases aura counter, NOT rounds
@@ -1324,6 +1285,12 @@ function showSustainDialog(actor) {
           const maxRounds = effect.flags?.world?.sustainedSpell?.maxSustainRounds || 10;
           const curRounds = effect.system?.duration?.value || 0;
           const spellType = effect.flags?.world?.sustainedSpell?.spellType;
+          
+          // Clean up any glow effects from hovering
+          if (currentlyHighlighted) {
+            highlightTargets(currentlyHighlighted, false);
+            currentlyHighlighted = null;
+          }
           
           // For Bless, don't check max rounds since we track aura counter
           if (spellType !== 'bless' && curRounds >= maxRounds) {
@@ -1931,6 +1898,10 @@ class PositionedPanelSustainedSpellsIntegration {
       // Click to sustain
       entry.addEventListener('click', async () => {
         if (entry.classList.contains('disabled')) return;
+        
+        // Clean up any glow effects before sustaining
+        this.highlightTargets(effect, false);
+        
         await this.sustainSpell(actor, effect);
       });
     });
