@@ -113,7 +113,7 @@
     "sustainingEffect": {
       "name": "Sustaining: Bless",
       "slug": "sustaining-bless", 
-      "description": "You are sustaining a Bless spell.",
+      "description": "<br/><br/><strong>Current Aura:</strong> 15 Feet<br/><em>Sustaining increases aura size by 10 feet.</em>",
       "duration": { "value": 1, "unit": "rounds", "sustained": true },
       "maxSustainRounds": 10,
       "spellType": "bless",
