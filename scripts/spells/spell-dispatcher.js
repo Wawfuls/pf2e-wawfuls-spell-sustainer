@@ -78,6 +78,10 @@ function validateTargets(requirement, targets, caster) {
     return { success: true, targets: [{ actor: caster }] };
   }
   
+  if (requirement.type === 'none') {
+    return { success: true, targets: [] };
+  }
+  
   if (requirement.type === 'exact') {
     if (validTargets.length !== requirement.count) {
       return {
