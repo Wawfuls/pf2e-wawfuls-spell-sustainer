@@ -326,9 +326,9 @@ async function createSustainingEffectFromConfig(sustainingConfig, spell, caster,
           spellType: sustainingConfig.spellType,
           auraCounter: sustainingConfig.auraCounter || undefined,
           ...targetData,
-          // Store target IDs for cleanup
-          allyTargetId: categorizedTargets.ally?.[0]?.actor?.id,
-          enemyTargetId: categorizedTargets.enemy?.[0]?.actor?.id
+          // Store target IDs for cleanup (only for spells with targets)
+          allyTargetId: categorizedTargets?.ally?.[0]?.actor?.id,
+          enemyTargetId: categorizedTargets?.enemy?.[0]?.actor?.id
         }
       }
     }
@@ -362,7 +362,15 @@ async function handleMeasuredTemplateSpell(spell, caster, msg, ctx, config) {
   }
 
   // Create the sustaining effect
-  const sustainingEffectData = createSustainingEffectFromConfig(config, spell, caster, msg, ctx, castLevel);
+  const sustainingEffectData = await createSustainingEffectFromConfig(
+    config.sustainingEffect, 
+    spell, 
+    caster, 
+    castLevel, 
+    msg, 
+    {}, // empty target data for template spells
+    {} // empty categorized targets for template spells
+  );
   
   // Store template configuration in the sustaining effect
   sustainingEffectData.flags.world.sustainedSpell.templateConfig = config.template;
