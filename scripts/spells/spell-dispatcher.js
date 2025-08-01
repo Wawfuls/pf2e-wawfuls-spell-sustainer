@@ -135,6 +135,26 @@ async function handleImmediateEffectsSpell(spell, caster, categorizedTargets, ms
   
   const castLevel = extractCastLevel(msg, ctx, spell);
   
+  // Safety check: ensure we don't create duplicate effects for the same spell cast
+  const spellSlug = spell.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const sustainingSlug = `sustaining-${spellSlug}`;
+  
+  // Check if this exact sustaining effect already exists
+  let existing = caster.itemTypes.effect.find(e => e.slug === sustainingSlug);
+  if (existing) {
+    console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for this spell cast (${spell.name}), skipping duplicate creation`);
+    return;
+  }
+  
+  // Additional check by chat message ID to be extra safe
+  const existingByChatId = caster.itemTypes.effect.find(e => 
+    e.flags?.world?.sustainedSpell?.createdFromChat === msg.id
+  );
+  if (existingByChatId) {
+    console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for chat message ${msg.id}, skipping duplicate creation`);
+    return;
+  }
+
   // Create sustaining effect first if configured
   let sustainingEffect = null;
   if (config.sustainingEffect) {
@@ -200,6 +220,26 @@ async function handleImmediateEffectsSpell(spell, caster, categorizedTargets, ms
 // Handle self-aura spells (like Bless)
 async function handleSelfAuraSpell(spell, caster, msg, ctx, config) {
   console.log(`[PF2e Spell Sustainer] Handling self-aura spell with config`);
+  
+  // Safety check: ensure we don't create duplicate effects for the same spell cast
+  const spellSlug = spell.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const sustainingSlug = `sustaining-${spellSlug}`;
+  
+  // Check if this exact sustaining effect already exists
+  let existing = caster.itemTypes.effect.find(e => e.slug === sustainingSlug);
+  if (existing) {
+    console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for this spell cast (${spell.name}), skipping duplicate creation`);
+    return;
+  }
+  
+  // Additional check by chat message ID to be extra safe
+  const existingByChatId = caster.itemTypes.effect.find(e => 
+    e.flags?.world?.sustainedSpell?.createdFromChat === msg.id
+  );
+  if (existingByChatId) {
+    console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for chat message ${msg.id}, skipping duplicate creation`);
+    return;
+  }
   
   const castLevel = extractCastLevel(msg, ctx, spell);
   
