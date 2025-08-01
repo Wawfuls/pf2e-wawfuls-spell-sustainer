@@ -188,18 +188,18 @@ export class PF2eHUDSustainedSpellsIntegration {
     // Find tokens for the targets
     const targetTokens = [];
     for (const target of sustainedSpellData.targets) {
-      const token = canvas.tokens.placeables.find(t => t.actor?.id === target.id);
+      const token = canvas.tokens.placeables.find(t => t.actor?.uuid === target.uuid);
       if (token) {
         targetTokens.push(token);
-        console.log(`[Debug] Found token for ${target.name} (${target.relationship}):`, token.actor.name);
+        console.log(`[Debug] Found token for ${target.name} (${target.relationship}):`, token.actor.name, 'UUID:', target.uuid);
       }
     }
 
     // Apply or remove highlight
     for (const token of targetTokens) {
       if (highlight) {
-        // Get relationship for color coding - use the same lookup as legacy
-        const relationship = sustainedSpellData.targets.find(t => t.id === token.actor.id)?.relationship;
+        // Get relationship for color coding - use UUID for unique identification
+        const relationship = sustainedSpellData.targets.find(t => t.uuid === token.actor.uuid)?.relationship;
         let pingColor = 0xFFFFFF; // Default white
         if (relationship === 'ally') pingColor = 0x4CAF50; // Green
         else if (relationship === 'enemy') pingColor = 0xF44336; // Red
