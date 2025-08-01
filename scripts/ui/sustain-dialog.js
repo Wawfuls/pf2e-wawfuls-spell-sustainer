@@ -57,7 +57,11 @@ export function showSustainDialog(actor) {
     if (spellType === 'bless') {
       const auraCounter = sustainedSpellData?.auraCounter || 1;
       const auraSize = 5 + (auraCounter * 10);
-      statusDisplay = `${auraSize}ft aura (Round ${curRounds})`;
+              statusDisplay = `${auraSize} ft aura (Round ${curRounds})`;
+    } else if (sustainedSpellData?.templateConfig) {
+      const template = sustainedSpellData.templateConfig;
+      const displayType = template.displayType || template.type;
+      statusDisplay = `${template.distance} ft ${displayType} (Round ${curRounds}/${maxRounds})`;
     } else {
       statusDisplay = `Round ${curRounds}/${maxRounds}`;
     }

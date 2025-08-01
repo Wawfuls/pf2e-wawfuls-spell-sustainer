@@ -59,14 +59,13 @@ export class PositionedPanelSustainedSpellsIntegration {
       let targetInfo = '';
       const spellType = sustainedSpellData?.spellType;
       
-      // Skip target info for aura spells (they show aura size below instead)
-      if (spellType === 'bless' || spellType === 'self-aura') {
-        targetInfo = '';
-      }
-      // Show template info for templated spells
+              // Skip target info for aura spells (they show aura size below instead)
+        if (spellType === 'bless' || spellType === 'self-aura') {
+          targetInfo = '';
+        }
+      // Skip template info for templated spells (will show in status instead)
       else if (sustainedSpellData?.templateConfig) {
-        const template = sustainedSpellData.templateConfig;
-        targetInfo = ` <span style='color: #666'>(${template.distance} ft ${template.type})</span>`;
+        targetInfo = '';
       }
       // Show target info for other spells
       else if (sustainedSpellData?.targets && sustainedSpellData.targets.length > 0) {
@@ -91,7 +90,11 @@ export class PositionedPanelSustainedSpellsIntegration {
       if (sustainedSpellData?.spellType === 'bless') {
         const auraCounter = sustainedSpellData?.auraCounter || 1;
         const auraSize = 5 + (auraCounter * 10);
-        statusInfo = `<span style='color:#888'>(${auraSize} Feet Aura) (Rounds: ${curRounds})</span>`;
+        statusInfo = `<span style='color:#888'>(${auraSize} Foot Aura) (Rounds: ${curRounds})</span>`;
+      } else if (sustainedSpellData?.templateConfig) {
+        const template = sustainedSpellData.templateConfig;
+        const displayType = template.displayType || template.type;
+        statusInfo = `<span style='color:#888'>(${template.distance} Foot ${displayType}) (Rounds: ${curRounds}/${maxRounds})</span>`;
       } else {
         statusInfo = `<span style='color:#888'>(Rounds: ${curRounds}/${maxRounds})</span>`;
       }

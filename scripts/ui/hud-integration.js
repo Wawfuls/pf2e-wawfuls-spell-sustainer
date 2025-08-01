@@ -104,26 +104,29 @@ export class PF2eHUDSustainedSpellsIntegration {
       // Format name with template/target info
       let displayName = spellName;
       
-      // Skip target info for aura spells (they show aura size below instead)
+      // Skip target info for aura spells (they show aura size below instead)  
       if (spellType === 'bless' || spellType === 'self-aura') {
         // Keep name as is
       }
-      // Show template info for templated spells
+      // Skip template info for templated spells (will show in status instead)
       else if (sustainedSpellData?.templateConfig) {
-        const template = sustainedSpellData.templateConfig;
-        displayName += ` (${template.distance} ft ${template.type})`;
+        // Keep name as is
       }
       // Show target count for other spells (only if not already in name)
       else if (sustainedSpellData?.targets && sustainedSpellData.targets.length > 0 && !spellName.includes('target')) {
         displayName += ` (${sustainedSpellData.targets.length} target${sustainedSpellData.targets.length > 1 ? 's' : ''})`;
       }
       
-      // For Bless, show aura info
+      // Status info based on spell type
       let statusInfo = '';
       if (sustainedSpellData?.spellType === 'bless') {
         const auraCounter = sustainedSpellData?.auraCounter || 1;
         const auraSize = 5 + (auraCounter * 10);
-        statusInfo = `${auraSize}ft aura`;
+        statusInfo = `${auraSize} ft aura`;
+      } else if (sustainedSpellData?.templateConfig) {
+        const template = sustainedSpellData.templateConfig;
+        const displayType = template.displayType || template.type;
+        statusInfo = `${template.distance} ft ${displayType} (${curRounds}/${maxRounds})`;
       } else {
         statusInfo = `${curRounds}/${maxRounds}`;
       }
