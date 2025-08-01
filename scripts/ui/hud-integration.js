@@ -292,8 +292,6 @@ export class PF2eHUDSustainedSpellsIntegration {
     
     const actionGlyph = `<span class='action-glyph'>1</span>`;
     
-    const sustainedSpellData = effect.flags?.world?.sustainedSpell;
-    
     // Add special behavior notes to chat
     let specialNote = '';
     const spellType = sustainedSpellData?.spellType;
