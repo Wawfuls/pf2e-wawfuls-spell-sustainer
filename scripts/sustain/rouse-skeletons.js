@@ -38,9 +38,16 @@ export async function handleRouseSkeletonsSustain(caster, sustainingEffect) {
   // Activate the template layer
   canvas.templates.activate();
   
-  // Create the template document directly at mouse position
-  const mousePos = canvas.app.renderer.plugins.interaction.mouse.global;
-  const canvasPos = canvas.canvasCoordinatesFromClient(mousePos);
+  // Create the template document at canvas center or controlled token position
+  let canvasPos;
+  const controlledToken = canvas.tokens.controlled[0];
+  if (controlledToken) {
+    // Place near the controlled token
+    canvasPos = { x: controlledToken.x, y: controlledToken.y };
+  } else {
+    // Fallback to canvas center
+    canvasPos = { x: canvas.dimensions.width / 2, y: canvas.dimensions.height / 2 };
+  }
   
   const finalData = foundry.utils.mergeObject(templateData, {
     x: canvasPos.x,
