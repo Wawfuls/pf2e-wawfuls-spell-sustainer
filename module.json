@@ -16,6 +16,9 @@
   "esmodules": [
     "scripts/main.js"
   ],
+  "styles": [
+    "styles/pf2e-hud-integration.css"
+  ],
   "languages": [
     { "lang": "en", "name": "English", "path": "lang/en.json" }
   ],
