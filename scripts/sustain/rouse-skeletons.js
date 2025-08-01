@@ -53,22 +53,59 @@ export async function handleRouseSkeletonsSustain(caster, sustainingEffect) {
     ui.notifications.info(`Rouse Skeletons template placed successfully.`);
   });
   
-  // Start Foundry's interactive template placement
+  // Start Foundry's interactive template placement using the template layer
   try {
-    const cls = getDocumentClass("MeasuredTemplate");
-    const template = new cls(templateData, {parent: canvas.scene});
+    // Activate the templates layer
+    canvas.templates.activate();
     
-    // Create the template object for placement
-    const templateObject = new CONFIG.MeasuredTemplate.objectClass(template);
+    // Use the template layer's built-in placement workflow
+    const templateLayer = canvas.templates;
     
-    // Start the placement workflow - this allows user interaction
-    templateObject.draw();
-    templateObject.layer.activate();
-    templateObject.layer.preview.addChild(templateObject);
-    templateObject.activatePreviewListeners();
-    
-    console.log(`[PF2e Spell Sustainer] Started interactive template placement for Rouse Skeletons`);
-    ui.notifications.info(`Place your Rouse Skeletons template (10-foot circle).`);
+    // Create a template placement workflow similar to spell casting
+    const initialTemplate = templateLayer.createPreview(templateData);
+    if (initialTemplate) {
+      console.log(`[PF2e Spell Sustainer] Started interactive template placement for Rouse Skeletons`);
+      ui.notifications.info(`Place your Rouse Skeletons template (10-foot circle).`);
+    } else {
+      // Fallback: try direct creation with user notification
+      ui.notifications.info(`Click where you want to place your Rouse Skeletons template.`);
+      
+      // Set up a one-time click listener for template placement
+      const placeTemplate = async (event) => {
+        const pos = event.data.getLocalPosition(canvas.app.stage);
+        const finalData = foundry.utils.mergeObject(templateData, {
+          x: pos.x,
+          y: pos.y,
+          flags: {
+            world: {
+              sustainedBy: sustainingEffect.uuid
+            }
+          }
+        });
+        
+        try {
+          const templateDoc = await CONFIG.MeasuredTemplate.documentClass.create(finalData, {
+            parent: canvas.scene
+          });
+          
+          await sustainingEffect.update({
+            'flags.world.sustainedSpell.templateId': templateDoc.id
+          });
+          
+          console.log(`[PF2e Spell Sustainer] Template placed for Rouse Skeletons:`, templateDoc.id);
+          ui.notifications.info(`Rouse Skeletons template placed successfully.`);
+        } catch (createError) {
+          console.error(`[PF2e Spell Sustainer] Failed to create template:`, createError);
+          ui.notifications.error(`Failed to create Rouse Skeletons template.`);
+        }
+        
+        // Remove the click listener
+        canvas.app.stage.off('click', placeTemplate);
+      };
+      
+      // Add click listener
+      canvas.app.stage.once('click', placeTemplate);
+    }
   } catch (error) {
     console.error(`[PF2e Spell Sustainer] Failed to start template placement:`, error);
     ui.notifications.error(`Failed to start Rouse Skeletons template placement.`);
