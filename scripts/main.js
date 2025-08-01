@@ -127,6 +127,20 @@ Hooks.on('deleteItem', async (item, options, userId) => {
         }
         
         console.log(`[PF2e Spell Sustainer] Removed ${totalRemoved} linked effects for ${item.name}`);
+        
+        // Clean up linked measured template if any
+        const templateId = sustainedSpellData.templateId;
+        if (templateId) {
+          try {
+            const template = canvas.templates.get(templateId);
+            if (template) {
+              await template.document.delete();
+              console.log(`[PF2e Spell Sustainer] Removed linked template for ${item.name}`);
+            }
+          } catch (templateError) {
+            console.warn(`[PF2e Spell Sustainer] Could not clean up template:`, templateError);
+          }
+        }
       }
       
       // Refresh UI elements
