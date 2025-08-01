@@ -180,21 +180,21 @@ export class PF2eHUDSustainedSpellsIntegration {
     const sustainedSpellData = effect.flags?.world?.sustainedSpell;
     if (!sustainedSpellData?.targets || !canvas.tokens) return;
 
+    // Create a unique identifier for this effect's highlights
+    const effectId = effect.id;
+    
     // Find tokens for the targets
     const targetTokens = [];
     for (const target of sustainedSpellData.targets) {
       const token = canvas.tokens.placeables.find(t => t.actor?.id === target.id);
-      if (token) targetTokens.push(token);
+      if (token) targetTokens.push({ token, target });
     }
 
     // Apply or remove highlight
-    for (const token of targetTokens) {
+    for (const { token, target } of targetTokens) {
       if (highlight) {
-        // Use Foundry's built-in targeting system for visual feedback
-        token.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: true });
-        
         // Get relationship for color coding
-        const relationship = sustainedSpellData.targets.find(t => t.id === token.actor.id)?.relationship;
+        const relationship = target.relationship;
         let pingColor = 0xFFFFFF; // Default white
         if (relationship === 'ally') pingColor = 0x4CAF50; // Green
         else if (relationship === 'enemy') pingColor = 0xF44336; // Red
@@ -207,12 +207,18 @@ export class PF2eHUDSustainedSpellsIntegration {
           console.log('Ping failed:', e);
         }
         
-        token._sustainHighlight = true;
+        // Mark as highlighted by this effect
+        token._sustainHighlights = token._sustainHighlights || new Set();
+        token._sustainHighlights.add(effectId);
       } else {
-        // Remove targeting highlight
-        if (token._sustainHighlight) {
-          token.setTarget(false, { user: game.user, releaseOthers: false });
-          token._sustainHighlight = false;
+        // Remove this effect's highlight
+        if (token._sustainHighlights && token._sustainHighlights.has(effectId)) {
+          token._sustainHighlights.delete(effectId);
+          
+          // Clean up if no more highlights
+          if (token._sustainHighlights.size === 0) {
+            delete token._sustainHighlights;
+          }
         }
       }
     }
@@ -261,15 +267,6 @@ export class PF2eHUDSustainedSpellsIntegration {
     
     const sustainedSpellData = effect.flags?.world?.sustainedSpell;
     
-    // Add special behavior notes to chat
-    let specialNote = '';
-    const spellType = sustainedSpellData?.spellType;
-    if (spellType === 'forbidding-ward') {
-      specialNote = '<br/><em>Sustaining added 1 round to target effects.</em>';
-    } else if (spellType === 'bless') {
-      specialNote = `<br/><em>Aura size increased by 10 feet.</em>`;
-    }
-    
     ChatMessage.create({
       user: game.user.id,
       speaker,
@@ -280,7 +277,7 @@ export class PF2eHUDSustainedSpellsIntegration {
             <h3>${spellName} ${actionGlyph}</h3>
           </header>
           <div class='card-content'>
-            <p><strong>${actor.name} sustained this spell.</strong>${specialNote}</p>
+            <p><strong>${actor.name} sustained this spell.</strong></p>
             <hr />
             ${desc}
           </div>

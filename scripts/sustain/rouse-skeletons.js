@@ -33,9 +33,6 @@ export async function handleRouseSkeletonsSustain(caster, sustainingEffect) {
     fillColor: game.user.color || "#FF0000"
   };
   
-  // Activate the template layer
-  canvas.templates.activate();
-  
   // Monitor for template placement completion
   Hooks.once('createMeasuredTemplate', async (templateDoc) => {
     console.log(`[PF2e Spell Sustainer] Template placed for Rouse Skeletons:`, templateDoc.id);
@@ -49,15 +46,10 @@ export async function handleRouseSkeletonsSustain(caster, sustainingEffect) {
     await sustainingEffect.update({
       'flags.world.sustainedSpell.templateId': templateDoc.id
     });
-    
-    ui.notifications.info(`Rouse Skeletons template placed successfully.`);
   });
   
   // Start Foundry's interactive template placement using the template layer
   try {
-    // Activate the templates layer
-    canvas.templates.activate();
-    
     // Use the template layer's built-in placement workflow
     const templateLayer = canvas.templates;
     
@@ -65,10 +57,9 @@ export async function handleRouseSkeletonsSustain(caster, sustainingEffect) {
     const initialTemplate = templateLayer.createPreview(templateData);
     if (initialTemplate) {
       console.log(`[PF2e Spell Sustainer] Started interactive template placement for Rouse Skeletons`);
-      ui.notifications.info(`Place your Rouse Skeletons template (10-foot circle).`);
     } else {
       // Fallback: try direct creation with user notification
-      ui.notifications.info(`Click where you want to place your Rouse Skeletons template.`);
+      console.log(`[PF2e Spell Sustainer] Using fallback click placement for template`);
       
       // Set up a one-time click listener for template placement
       const placeTemplate = async (event) => {
@@ -93,10 +84,8 @@ export async function handleRouseSkeletonsSustain(caster, sustainingEffect) {
           });
           
           console.log(`[PF2e Spell Sustainer] Template placed for Rouse Skeletons:`, templateDoc.id);
-          ui.notifications.info(`Rouse Skeletons template placed successfully.`);
         } catch (createError) {
           console.error(`[PF2e Spell Sustainer] Failed to create template:`, createError);
-          ui.notifications.error(`Failed to create Rouse Skeletons template.`);
         }
         
         // Remove the click listener
@@ -108,6 +97,13 @@ export async function handleRouseSkeletonsSustain(caster, sustainingEffect) {
     }
   } catch (error) {
     console.error(`[PF2e Spell Sustainer] Failed to start template placement:`, error);
-    ui.notifications.error(`Failed to start Rouse Skeletons template placement.`);
   }
+  
+  // Standard sustain behavior - increment duration by 1 round
+  const maxRounds = sustainingEffect.flags?.world?.sustainedSpell?.maxSustainRounds || 10;
+  const curRounds = sustainingEffect.system?.duration?.value || 0;
+  await sustainingEffect.update({
+    'system.duration.value': Math.min(curRounds + 1, maxRounds),
+    'flags.world.sustainedThisTurn': true
+  });
 }
