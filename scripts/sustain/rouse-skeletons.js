@@ -23,32 +23,7 @@ export async function handleRouseSkeletonsSustain(caster, sustainingEffect) {
   // Create new template using Foundry's proper workflow
   console.log(`[PF2e Spell Sustainer] Starting template placement for Rouse Skeletons`);
   
-  // Monitor for template placement completion
-  const hookId = `templatePlacement_${sustainingEffect.id}`;
-  
-  Hooks.once('createMeasuredTemplate', async (templateDoc) => {
-    // Check if this template was created during our placement workflow
-    // We'll identify it by checking if it was created within a reasonable timeframe
-    console.log(`[PF2e Spell Sustainer] Template created during placement workflow:`, templateDoc.id);
-    
-    // Update the template with our sustaining effect link
-    await templateDoc.update({
-      'flags.world.sustainedBy': sustainingEffect.uuid
-    });
-    
-    // Update the sustaining effect with the new template ID
-    await sustainingEffect.update({
-      'flags.world.sustainedSpell.templateId': templateDoc.id
-    });
-    
-    ui.notifications.info(`Rouse Skeletons template placed successfully.`);
-  });
-  
-  // Clean up hook after 30 seconds if no template is placed
-  setTimeout(() => {
-    Hooks.off('createMeasuredTemplate', hookId);
-    console.log(`[PF2e Spell Sustainer] Template placement hook cleaned up`);
-  }, 30000);
+  // Direct template creation - no hook monitoring needed
   
   // Trigger Foundry's template placement tool
   const templateData = {
@@ -93,6 +68,4 @@ export async function handleRouseSkeletonsSustain(caster, sustainingEffect) {
     console.error(`[PF2e Spell Sustainer] Failed to create template:`, error);
     ui.notifications.error(`Failed to place Rouse Skeletons template.`);
   }
-  
-  ui.notifications.info(`Place your Rouse Skeletons template (10-foot circle).`);
 }
