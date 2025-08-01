@@ -1,0 +1,302 @@
+// Positioned Panel Integration (alternative to PF2e HUD) for sustained spells
+
+export class PositionedPanelSustainedSpellsIntegration {
+  constructor() {
+    this.enabled = false;
+    this.currentPanel = null;
+  }
+
+  init() {
+    console.log('[PF2e Spell Sustainer] Initializing positioned panel integration');
+    this.enabled = true;
+    this.setupHooks();
+    this.refreshPanel(); // Create initial panel if needed
+  }
+
+  setupHooks() {
+    // Refresh panel when actor data changes
+    Hooks.on('controlToken', () => this.refreshPanel());
+    Hooks.on('updateActor', () => this.refreshPanel());
+    Hooks.on('updateItem', () => this.refreshPanel());
+  }
+
+  refreshPanel() {
+    // Remove existing panel
+    if (this.currentPanel) {
+      this.currentPanel.remove();
+      this.currentPanel = null;
+    }
+
+    // Get current actor
+    const actor = canvas.tokens?.controlled?.[0]?.actor || game.user?.character;
+    if (!actor) return;
+
+    // Get sustained spells
+    const sustainingEffects = actor.itemTypes.effect.filter(e =>
+      (e.slug && e.slug.startsWith('sustaining-')) ||
+      (e.name && e.name.startsWith('Sustaining: '))
+    );
+
+    if (sustainingEffects.length === 0) return;
+
+    // Create new panel
+    this.createPanel(actor, sustainingEffects);
+  }
+
+  createPanel(actor, sustainingEffects) {
+    const panel = document.createElement('div');
+    panel.id = 'sustained-spells-smart-panel';
+
+    const spells = sustainingEffects.map(effect => {
+      const spellName = effect.flags?.world?.sustainedSpell?.spellName || 
+                      effect.name.replace(/^Sustaining: /, '').replace(/ \(\d+ targets?\)$/, '');
+      const sustainedSpellData = effect.flags?.world?.sustainedSpell;
+      const maxRounds = sustainedSpellData?.maxSustainRounds || 10;
+      const curRounds = effect.system?.duration?.value || 0;
+      const disabled = (sustainedSpellData?.spellType === 'bless') ? false : (curRounds >= maxRounds);
+
+      // Format target information
+      let targetInfo = '';
+      if (sustainedSpellData?.targets && sustainedSpellData.targets.length > 0) {
+        const allies = sustainedSpellData.allies || [];
+        const enemies = sustainedSpellData.enemies || [];
+        const neutral = sustainedSpellData.neutral || [];
+        
+        const summary = [];
+        if (allies.length) summary.push(`${allies.length} ally${allies.length > 1 ? 'ies' : ''}`);
+        if (enemies.length) summary.push(`${enemies.length} enem${enemies.length > 1 ? 'ies' : 'y'}`);
+        if (neutral.length) summary.push(`${neutral.length} neutral`);
+        
+        if (summary.length > 0) {
+          targetInfo = ` <span style='color: #666'>(${summary.join(', ')})</span>`;
+        }
+      } else if (sustainedSpellData?.targetName) {
+        targetInfo = ` <span style='color: #888'>(Target: ${sustainedSpellData.targetName})</span>`;
+      }
+
+      // Status information
+      let statusInfo = '';
+      if (sustainedSpellData?.spellType === 'bless') {
+        const auraCounter = sustainedSpellData?.auraCounter || 1;
+        const auraSize = 5 + (auraCounter * 10);
+        statusInfo = `<span style='color:#888'>(${auraSize} Feet Aura) (Rounds: ${curRounds})</span>`;
+      } else {
+        statusInfo = `<span style='color:#888'>(Rounds: ${curRounds}/${maxRounds})</span>`;
+      }
+
+      return {
+        effect,
+        html: `
+          <div class="sustained-spell-entry ${disabled ? 'disabled' : ''}" data-effect-id="${effect.id}" data-tooltip="${spellName}: Click to sustain">
+            <img src="${effect.img}" alt="${spellName}">
+            <div class="spell-details">
+              <div class="spell-name">${spellName}${targetInfo}</div>
+              <div class="spell-status">${statusInfo}</div>
+            </div>
+          </div>
+        `
+      };
+    });
+
+    panel.innerHTML = `
+      <div id="sustained-panel-content">
+        <div class="sustained-spells-header">Sustained Spells</div>
+        <div class="sustained-spells-list">
+          ${spells.map(spell => spell.html).join('')}
+        </div>
+      </div>
+    `;
+
+    // Setup event handlers
+    this.setupEventHandlers(panel, actor, sustainingEffects);
+
+    // Add to body
+    document.body.appendChild(panel);
+    this.currentPanel = panel;
+
+    console.log(`[PF2e Spell Sustainer] Created positioned panel with ${sustainingEffects.length} sustained spells`);
+  }
+
+  setupEventHandlers(panel, actor, sustainingEffects) {
+    panel.querySelectorAll('.sustained-spell-entry').forEach(entry => {
+      const effectId = entry.dataset.effectId;
+      const effect = sustainingEffects.find(e => e.id === effectId);
+      
+      if (!effect) return;
+
+      // Hover effects for target highlighting
+      entry.addEventListener('mouseenter', () => {
+        this.highlightTargets(effect, true);
+      });
+
+      entry.addEventListener('mouseleave', () => {
+        this.highlightTargets(effect, false);
+      });
+
+      // Click to sustain
+      entry.addEventListener('click', async () => {
+        if (entry.classList.contains('disabled')) return;
+        
+        // Clean up any glow effects before sustaining and add delay to ensure cleanup
+        this.highlightTargets(effect, false);
+        
+        // Use setTimeout to ensure glow cleanup happens before any DOM refresh
+        setTimeout(async () => {
+          await this.sustainSpell(actor, effect);
+          
+          // Additional cleanup after sustain in case DOM refresh interrupts
+          setTimeout(() => {
+            this.highlightTargets(effect, false);
+          }, 100);
+        }, 50);
+      });
+    });
+  }
+
+  highlightTargets(effect, highlight = true) {
+    const sustainedSpellData = effect.flags?.world?.sustainedSpell;
+    if (!sustainedSpellData?.targets || !canvas.tokens) return;
+
+    // Find tokens for the targets
+    const targetTokens = [];
+    for (const target of sustainedSpellData.targets) {
+      const token = canvas.tokens.placeables.find(t => t.actor?.id === target.id);
+      if (token) targetTokens.push(token);
+    }
+
+    // Apply or remove highlight
+    for (const token of targetTokens) {
+      if (highlight) {
+        // Use Foundry's built-in targeting system for visual feedback
+        token.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: true });
+        
+        // Get relationship for color coding
+        const relationship = sustainedSpellData.targets.find(t => t.id === token.actor.id)?.relationship;
+        let pingColor = 0xFFFFFF; // Default white
+        if (relationship === 'ally') pingColor = 0x4CAF50; // Green
+        else if (relationship === 'enemy') pingColor = 0xF44336; // Red
+        else if (relationship === 'neutral') pingColor = 0x9E9E9E; // Gray
+        
+        // Simple ping
+        try {
+          canvas.ping(token.center, { color: pingColor });
+        } catch (e) {
+          console.log('Ping failed:', e);
+        }
+        
+        // Add glow filter for enhanced visibility
+        try {
+          token.mesh.filters = token.mesh.filters || [];
+          const glowFilter = new PIXI.filters.GlowFilter({
+            distance: 10,
+            outerStrength: 2,
+            innerStrength: 1,
+            color: pingColor,
+            quality: 0.1
+          });
+          token.mesh.filters.push(glowFilter);
+          token._sustainGlowFilter = glowFilter;
+        } catch (e) {
+          console.log('Glow filter failed, using basic highlight');
+        }
+        
+        token._sustainHighlight = true;
+      } else {
+        // Remove targeting highlight
+        if (token._sustainHighlight) {
+          token.setTarget(false, { user: game.user, releaseOthers: false });
+          
+          // Remove glow filter if it exists
+          if (token._sustainGlowFilter && token.mesh.filters) {
+            const filterIndex = token.mesh.filters.indexOf(token._sustainGlowFilter);
+            if (filterIndex > -1) {
+              token.mesh.filters.splice(filterIndex, 1);
+            }
+            delete token._sustainGlowFilter;
+          }
+          
+          token._sustainHighlight = false;
+        }
+      }
+    }
+  }
+
+  async sustainSpell(actor, effect) {
+    const maxRounds = effect.flags?.world?.sustainedSpell?.maxSustainRounds || 10;
+    const curRounds = effect.system?.duration?.value || 0;
+    const spellType = effect.flags?.world?.sustainedSpell?.spellType;
+    
+    // For Bless, don't check max rounds since we track aura counter
+    if (spellType !== 'bless' && curRounds >= maxRounds) {
+      ui.notifications.warn('This effect is already at its maximum duration.');
+      return;
+    }
+    
+    // Handle special sustain behaviors based on spell type - import dynamically
+    if (spellType === 'forbidding-ward') {
+      const { handleForbiddingWardSustain } = await import('../sustain/forbidding-ward.js');
+      await handleForbiddingWardSustain(effect, actor);
+    } else if (spellType === 'bless') {
+      const { handleBlessSustain } = await import('../sustain/bless.js');
+      await handleBlessSustain(effect, actor);
+    } else {
+      // Standard sustain behavior
+      await effect.update({
+        'system.duration.value': Math.min(curRounds + 1, maxRounds),
+        'flags.world.sustainedThisTurn': true
+      });
+    }
+    
+    // Output a chat card - use the same function as HUD integration
+    await this.createSustainChatMessage(actor, effect);
+
+    // Refresh the panel to show updated state
+    this.refreshPanel();
+  }
+
+  async createSustainChatMessage(actor, effect) {
+    const speaker = ChatMessage.getSpeaker({ actor });
+    const spellName = effect.flags?.world?.sustainedSpell?.spellName || 
+                     effect.name.replace(/^Sustaining: /, '').replace(/ \(\d+ targets?\)$/, '');
+    const img = effect.img || 'icons/svg/mystery-man.svg';
+    const desc = effect.system?.description?.value || '';
+    const actionGlyph = `<span class='action-glyph'>1</span>`;
+    
+    const sustainedSpellData = effect.flags?.world?.sustainedSpell;
+    
+    // Add special behavior notes to chat
+    let specialNote = '';
+    const spellType = sustainedSpellData?.spellType;
+    if (spellType === 'forbidding-ward') {
+      specialNote = '<br/><em>Sustaining added 1 round to target effects.</em>';
+    } else if (spellType === 'bless') {
+      specialNote = `<br/><em>Aura size increased by 10 feet.</em>`;
+    }
+    
+    ChatMessage.create({
+      user: game.user.id,
+      speaker,
+      content: `
+        <div class='pf2e chat-card item-card' data-actor-id='${actor.id}' data-item-id='${effect.id}'>
+          <header class='card-header flexrow'>
+            <img src='${img}' alt='${spellName}' />
+            <h3>${spellName} ${actionGlyph}</h3>
+          </header>
+          <div class='card-content'>
+            <p><strong>${actor.name} sustained this spell.</strong>${specialNote}</p>
+            <hr />
+            ${desc}
+          </div>
+        </div>
+      `
+    });
+  }
+
+  disable() {
+    if (this.currentPanel) {
+      this.currentPanel.remove();
+      this.currentPanel = null;
+    }
+    this.enabled = false;
+  }
+}
