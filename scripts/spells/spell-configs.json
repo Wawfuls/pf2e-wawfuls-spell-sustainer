@@ -116,7 +116,7 @@
       "description": "<br/><br/><strong>Current Aura:</strong> 15 Feet<br/><em>Sustaining increases aura size by 10 feet.</em>",
       "duration": { "value": 10, "unit": "rounds", "sustained": true },
       "maxSustainRounds": 10,
-      "spellType": "bless",
+      "spellType": "self-aura",
       "auraCounter": 1,
       "rules": [
         {

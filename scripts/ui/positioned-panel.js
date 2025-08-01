@@ -53,14 +53,14 @@ export class PositionedPanelSustainedSpellsIntegration {
       const sustainedSpellData = effect.flags?.world?.sustainedSpell;
       const maxRounds = sustainedSpellData?.maxSustainRounds || 10;
       const curRounds = effect.system?.duration?.value || 0;
-      const disabled = (sustainedSpellData?.spellType === 'bless') ? false : (curRounds >= maxRounds);
+      const disabled = (sustainedSpellData?.spellType === 'self-aura') ? false : (curRounds >= maxRounds);
 
       // Format target/template information
       let targetInfo = '';
       const spellType = sustainedSpellData?.spellType;
       
               // Skip target info for aura spells (they show aura size below instead)
-        if (spellType === 'bless' || spellType === 'self-aura') {
+        if (spellType === 'self-aura') {
           targetInfo = '';
         }
       // Skip template info for templated spells (will show in status instead)
@@ -87,7 +87,7 @@ export class PositionedPanelSustainedSpellsIntegration {
 
       // Status information
       let statusInfo = '';
-      if (sustainedSpellData?.spellType === 'bless') {
+      if (sustainedSpellData?.spellType === 'self-aura') {
         const auraCounter = sustainedSpellData?.auraCounter || 1;
         const auraSize = 5 + (auraCounter * 10);
         statusInfo = `<span style='color:#888'>(${auraSize} Foot Aura) (Rounds: ${curRounds})</span>`;
@@ -305,7 +305,7 @@ export class PositionedPanelSustainedSpellsIntegration {
     const spellType = sustainedSpellData?.spellType;
     if (spellType === 'forbidding-ward') {
       specialNote = '<br/><em>Sustaining added 1 round to target effects.</em>';
-    } else if (spellType === 'bless') {
+          } else if (spellType === 'self-aura') {
       specialNote = `<br/><em>Aura size increased by 10 feet.</em>`;
     }
     

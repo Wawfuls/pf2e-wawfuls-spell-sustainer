@@ -50,11 +50,11 @@ export function showSustainDialog(actor) {
     
     // Determine if at max duration
     const spellType = sustainedSpellData?.spellType;
-    const atMax = spellType !== 'bless' && curRounds >= maxRounds;
+    const atMax = spellType !== 'self-aura' && curRounds >= maxRounds;
     
     // Status display
     let statusDisplay = '';
-    if (spellType === 'bless') {
+    if (spellType === 'self-aura') {
       const auraCounter = sustainedSpellData?.auraCounter || 1;
       const auraSize = 5 + (auraCounter * 10);
               statusDisplay = `${auraSize} ft aura (Round ${curRounds})`;
@@ -177,9 +177,10 @@ export function showSustainDialog(actor) {
           if (spellType === 'forbidding-ward') {
             const { handleForbiddingWardSustain } = await import('../sustain/forbidding-ward.js');
             await handleForbiddingWardSustain(effect, actor);
-          } else if (spellType === 'bless') {
-            const { handleBlessSustain } = await import('../sustain/bless.js');
-            await handleBlessSustain(effect, actor);
+          } else if (spellType === 'self-aura') {
+            // For backwards compatibility, assume this is Bless - the sustain dispatcher should handle this
+            const { dispatchSustainBehavior } = await import('../sustain/sustain-dispatcher.js');
+            await dispatchSustainBehavior(spellType, effect, actor);
           } else {
             // Standard sustain behavior
             await effect.update({
@@ -314,7 +315,7 @@ async function createSustainChatMessage(actor, effect) {
   const spellType = sustainedSpellData?.spellType;
   if (spellType === 'forbidding-ward') {
     specialNote = '<br/><em>Sustaining added 1 round to target effects.</em>';
-  } else if (spellType === 'bless') {
+        } else if (spellType === 'self-aura') {
     specialNote = `<br/><em>Aura size increased by 10 feet.</em>`;
   }
   

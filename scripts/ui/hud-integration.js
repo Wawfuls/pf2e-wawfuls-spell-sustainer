@@ -105,7 +105,7 @@ export class PF2eHUDSustainedSpellsIntegration {
       let displayName = spellName;
       
       // Skip target info for aura spells (they show aura size below instead)  
-      if (spellType === 'bless' || spellType === 'self-aura') {
+      if (spellType === 'self-aura') {
         // Keep name as is
       }
       // Skip template info for templated spells (will show in status instead)
@@ -119,7 +119,7 @@ export class PF2eHUDSustainedSpellsIntegration {
       
       // Status info based on spell type
       let statusInfo = '';
-      if (sustainedSpellData?.spellType === 'bless') {
+      if (sustainedSpellData?.spellType === 'self-aura') {
         const auraCounter = sustainedSpellData?.auraCounter || 1;
         const auraSize = 5 + (auraCounter * 10);
         statusInfo = `${auraSize} ft aura`;
@@ -132,7 +132,7 @@ export class PF2eHUDSustainedSpellsIntegration {
       }
 
       // Check if at max duration
-      const atMax = sustainedSpellData?.spellType !== 'bless' && curRounds >= maxRounds;
+      const atMax = sustainedSpellData?.spellType !== 'self-aura' && curRounds >= maxRounds;
 
       return {
         id: effect.id,
@@ -299,7 +299,7 @@ export class PF2eHUDSustainedSpellsIntegration {
     const spellType = sustainedSpellData?.spellType;
     if (spellType === 'forbidding-ward') {
       specialNote = '<br/><em>Sustaining added 1 round to target effects.</em>';
-    } else if (spellType === 'bless') {
+    } else if (spellType === 'self-aura') {
       specialNote = `<br/><em>Aura size increased by 10 feet.</em>`;
     }
     
