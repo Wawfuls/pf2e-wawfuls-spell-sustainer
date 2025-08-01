@@ -83,7 +83,7 @@ Hooks.on('createItem', (item, options, userId) => {
   }
 });
 
-Hooks.on('deleteItem', (item, options, userId) => {
+Hooks.on('deleteItem', async (item, options, userId) => {
   if (item.type === 'effect' && item.parent?.type === 'character') {
     const actor = item.parent;
     
