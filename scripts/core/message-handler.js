@@ -96,53 +96,9 @@ export async function handleSustainedSpellCast(msg, options, userId) {
     targets = Array.from(game.user.targets);
   }
   
-  // Check for specific spell handling - this will need to be imported from spell handlers
-  const spellName = spell.name.toLowerCase();
-  console.log(`[PF2e Spell Sustainer] Spell dispatcher - checking spell: "${spellName}"`);
-  
-  // Import spell handlers dynamically
-  if (spellName.includes('evil eye')) {
-    console.log(`[PF2e Spell Sustainer] Routing to Evil Eye handler`);
-    const { handleEvilEye } = await import('../spells/evil-eye.js');
-    await handleEvilEye(spell, caster, targets, msg, ctx);
-  } else if (spellName.includes('needle of vengeance')) {
-    console.log(`[PF2e Spell Sustainer] Routing to Needle of Vengeance handler`);
-    const { handleNeedleOfVengeance } = await import('../spells/needle-of-vengeance.js');
-    await handleNeedleOfVengeance(spell, caster, targets, msg, ctx);
-  } else if (spellName.includes('forbidding ward')) {
-    console.log(`[PF2e Spell Sustainer] Routing to Forbidding Ward handler`);
-    const { handleForbiddingWard } = await import('../spells/forbidding-ward.js');
-    await handleForbiddingWard(spell, caster, targets, msg, ctx);
-  } else if (spellName.includes('bless')) {
-    console.log(`[PF2e Spell Sustainer] Routing to Bless handler`);
-    const { handleBless } = await import('../spells/bless.js');
-    await handleBless(spell, caster, targets, msg, ctx);
-  } else {
-    console.log(`[PF2e Spell Sustainer] Using generic spell handler for: "${spellName}"`);
-    
-    // Fall back to generic handling for other spells
-    if (!targets.length) {
-      // If no targets, treat the caster as the target (for self-buffs)
-      targets = [{ actor: caster }];
-    }
-    
-    // Filter out targets that don't have actors
-    const validTargets = targets.filter(tok => tok.actor);
-    if (!validTargets.length) return;
-
-    // Check if this spell requires saving throws
-    const requiresSave = checkIfSpellRequiresSave(spell);
-    
-    if (requiresSave) {
-      // For save-dependent spells, wait for save results and then apply effects
-      console.log(`[PF2e Spell Sustainer] ${spell.name} requires saves, monitoring for save results...`);
-      await handleSaveDependentSpell(spell, caster, validTargets, msg, ctx);
-    } else {
-      // For spells that don't require saves, proceed normally
-      const { createSustainedEffects } = await import('../effects/generic.js');
-      await createSustainedEffects(spell, caster, validTargets, msg, ctx);
-    }
-  }
+  // Use the new spell dispatcher system
+  const { dispatchSpell } = await import('../spells/spell-dispatcher.js');
+  await dispatchSpell(spell, caster, targets, msg, ctx);
 }
 
 // Handle spells that require saving throws by monitoring chat for save results
