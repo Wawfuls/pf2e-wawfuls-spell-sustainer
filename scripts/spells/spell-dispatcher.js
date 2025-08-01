@@ -381,8 +381,9 @@ async function handleMeasuredTemplateSpell(spell, caster, msg, ctx, config) {
   
   console.log(`[PF2e Spell Sustainer] Created sustaining effect for ${spell.name}, template config ready`);
   
-  // Show notification to place template
-  ui.notifications.info(`${spell.name} sustained. Use the sustain UI to place your template.`);
+  // Immediately start template placement for initial cast
+  const { handleRouseSkeletonsSustain } = await import('../sustain/rouse-skeletons.js');
+  await handleRouseSkeletonsSustain(caster, sustainingEffect);
 }
 
 // Note: No generic fallback - only explicitly configured spells get sustaining effects
