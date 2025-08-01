@@ -50,29 +50,49 @@ export async function handleRouseSkeletonsSustain(caster, sustainingEffect) {
     console.log(`[PF2e Spell Sustainer] Template placement hook cleaned up`);
   }, 30000);
   
-  // Use Foundry's built-in template placement tool
+  // Trigger Foundry's template placement tool
   const templateData = {
     t: templateConfig.type,
     distance: templateConfig.distance,
     angle: templateConfig.angle || 0,
     width: templateConfig.width || 0,
-    direction: 0
+    direction: 0,
+    fillColor: game.user.color || "#FF0000"
   };
   
-  // Activate the template layer and start placement using the standard workflow
+  // Activate the template layer
   canvas.templates.activate();
   
-  // Use the template layer's placement workflow
-  const initialData = foundry.utils.mergeObject(templateData, {
-    x: canvas.mousePosition.x,
-    y: canvas.mousePosition.y
+  // Create the template document directly at mouse position
+  const mousePos = canvas.app.renderer.plugins.interaction.mouse.global;
+  const canvasPos = canvas.canvasCoordinatesFromClient(mousePos);
+  
+  const finalData = foundry.utils.mergeObject(templateData, {
+    x: canvasPos.x,
+    y: canvasPos.y,
+    flags: {
+      world: {
+        sustainedBy: sustainingEffect.uuid
+      }
+    }
   });
   
-  // Use the document creation workflow
-  await CONFIG.MeasuredTemplate.documentClass.create(initialData, {
-    parent: canvas.scene,
-    fromTool: true
-  });
+  try {
+    const templateDoc = await CONFIG.MeasuredTemplate.documentClass.create(finalData, {
+      parent: canvas.scene
+    });
+    
+    // Update the sustaining effect with the new template ID  
+    await sustainingEffect.update({
+      'flags.world.sustainedSpell.templateId': templateDoc.id
+    });
+    
+    console.log(`[PF2e Spell Sustainer] Template created at position for Rouse Skeletons:`, templateDoc.id);
+    ui.notifications.info(`Rouse Skeletons template placed successfully.`);
+  } catch (error) {
+    console.error(`[PF2e Spell Sustainer] Failed to create template:`, error);
+    ui.notifications.error(`Failed to place Rouse Skeletons template.`);
+  }
   
   ui.notifications.info(`Place your Rouse Skeletons template (10-foot circle).`);
 }
