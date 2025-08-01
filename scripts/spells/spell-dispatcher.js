@@ -59,6 +59,10 @@ export async function dispatchSpell(spell, caster, targets, msg, ctx) {
       await handleSelfAuraSpell(spell, caster, msg, ctx, config);
       break;
       
+    case 'measured-template':
+      await handleMeasuredTemplateSpell(spell, caster, msg, ctx, config);
+      break;
+      
     default:
       console.warn(`[PF2e Spell Sustainer] Unknown spell type: ${config.spellType} for ${spell.name}`);
       ui.notifications.warn(`Unknown spell type "${config.spellType}" for ${spell.name}. Please check spell configuration.`);
@@ -325,6 +329,48 @@ async function createSustainingEffectFromConfig(sustainingConfig, spell, caster,
       }
     }
   };
+}
+
+// Handle measured template spells
+async function handleMeasuredTemplateSpell(spell, caster, msg, ctx, config) {
+  console.log(`[PF2e Spell Sustainer] Handling measured template spell with config`);
+  
+  const castLevel = extractCastLevel(msg, ctx, spell);
+  
+  // Safety check: ensure we don't create duplicate effects for the same spell cast
+  const spellSlug = spell.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const sustainingSlug = `sustaining-${spellSlug}`;
+  
+  // Check if this exact sustaining effect already exists
+  let existing = caster.itemTypes.effect.find(e => e.slug === sustainingSlug);
+  if (existing) {
+    console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for this spell cast (${spell.name}), skipping duplicate creation`);
+    return;
+  }
+  
+  // Additional check by chat message ID to be extra safe
+  const existingByChatId = caster.itemTypes.effect.find(e => 
+    e.flags?.world?.sustainedSpell?.createdFromChat === msg.id
+  );
+  if (existingByChatId) {
+    console.log(`[PF2e Spell Sustainer] Effect already exists for this chat message, skipping duplicate creation`);
+    return;
+  }
+
+  // Create the sustaining effect
+  const sustainingEffectData = createSustainingEffectFromConfig(config, spell, caster, msg, ctx, castLevel);
+  
+  // Store template configuration in the sustaining effect
+  sustainingEffectData.flags.world.sustainedSpell.templateConfig = config.template;
+  sustainingEffectData.flags.world.sustainedSpell.templateId = null; // Will be set when template is placed
+  
+  const createdEffects = await caster.createEmbeddedDocuments('Item', [sustainingEffectData]);
+  const sustainingEffect = createdEffects[0];
+  
+  console.log(`[PF2e Spell Sustainer] Created sustaining effect for ${spell.name}, template config ready`);
+  
+  // Show notification to place template
+  ui.notifications.info(`${spell.name} sustained. Use the sustain UI to place your template.`);
 }
 
 // Note: No generic fallback - only explicitly configured spells get sustaining effects

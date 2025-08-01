@@ -236,6 +236,9 @@ export class PF2eHUDSustainedSpellsIntegration {
     } else if (spellType === 'bless') {
       const { handleBlessSustain } = await import('../sustain/bless.js');
       await handleBlessSustain(effect, actor);
+    } else if (spellType === 'rouse-skeletons') {
+      const { handleRouseSkeletonsSustain } = await import('../sustain/rouse-skeletons.js');
+      await handleRouseSkeletonsSustain(actor, effect);
     } else {
       // Standard sustain behavior
       await effect.update({

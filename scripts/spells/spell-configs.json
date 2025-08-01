@@ -126,5 +126,26 @@
       ]
     },
     "sustainBehavior": "bless"
+  },
+
+  "rouse-skeletons": {
+    "name": "Rouse Skeletons",
+    "spellType": "measured-template",
+    "targetRequirement": {
+      "type": "none"
+    },
+    "template": {
+      "type": "circle",
+      "distance": 10,
+      "angle": 0,
+      "width": 0
+    },
+    "sustainingEffect": {
+      "name": "Sustaining: Rouse Skeletons", 
+      "slug": "sustaining-rouse-skeletons",
+      "maxSustainRounds": 10,
+      "duration": { "value": 1, "unit": "rounds", "sustained": true, "expiry": "turn-end" },
+      "spellType": "rouse-skeletons"
+    }
   }
 }
