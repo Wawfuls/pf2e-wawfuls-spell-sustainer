@@ -569,7 +569,7 @@ async function createNeedleOfVengeanceEffects(spell, caster, ally, enemy, msg, c
     system: {
       slug: `needle-of-vengeance-ally`,
       description: { value: `You are protected by Needle of Vengeance. The linked enemy will take backlash damage if they attack you.` },
-      duration: { value: 10, unit: 'minutes', sustained: false, expiry: 'turn-end' },
+      duration: { value: 10, unit: 'rounds', sustained: false, expiry: 'turn-end' },
       start: { value: game.combat ? game.combat.round : 0, initiative: null },
       level: { value: castLevel }
     },
@@ -596,7 +596,7 @@ async function createNeedleOfVengeanceEffects(spell, caster, ally, enemy, msg, c
     system: {
       slug: `needle-of-vengeance-enemy`,
       description: { value: `You are cursed by Needle of Vengeance. You will take backlash damage if you attack the linked ally.` },
-      duration: { value: 10, unit: 'minutes', sustained: false, expiry: 'turn-end' },
+      duration: { value: 10, unit: 'rounds', sustained: false, expiry: 'turn-end' },
       start: { value: game.combat ? game.combat.round : 0, initiative: null },
       level: { value: castLevel }
     },
@@ -703,7 +703,7 @@ async function createForbiddingWardEffects(spell, caster, ally, enemy, msg, ctx)
     system: {
       slug: `forbidding-ward-ally`,
       description: { value: `You are protected by a Forbidding Ward against the linked enemy.` },
-      duration: { value: 10, unit: 'minutes', sustained: false, expiry: 'turn-end' },
+      duration: { value: 10, unit: 'rounds', sustained: false, expiry: 'turn-end' },
       start: { value: game.combat ? game.combat.round : 0, initiative: null },
       level: { value: castLevel },
       rules: [
@@ -744,7 +744,7 @@ async function createForbiddingWardEffects(spell, caster, ally, enemy, msg, ctx)
     system: {
       slug: `forbidding-ward-enemy`,
       description: { value: `You are hindered by a Forbidding Ward protecting the linked target.` },
-      duration: { value: 10, unit: 'minutes', sustained: false, expiry: 'turn-end' },
+      duration: { value: 10, unit: 'rounds', sustained: false, expiry: 'turn-end' },
       start: { value: game.combat ? game.combat.round : 0, initiative: null },
       level: { value: castLevel }
     },
@@ -1286,11 +1286,19 @@ function showSustainDialog(actor) {
           const curRounds = effect.system?.duration?.value || 0;
           const spellType = effect.flags?.world?.sustainedSpell?.spellType;
           
-          // Clean up any glow effects from hovering
+          // Clean up any glow effects from hovering with timeout to ensure cleanup
           if (currentlyHighlighted) {
             highlightTargets(currentlyHighlighted, false);
             currentlyHighlighted = null;
           }
+          
+          // Additional cleanup after sustain action with delay
+          setTimeout(() => {
+            if (currentlyHighlighted) {
+              highlightTargets(currentlyHighlighted, false);
+              currentlyHighlighted = null;
+            }
+          }, 150);
           
           // For Bless, don't check max rounds since we track aura counter
           if (spellType !== 'bless' && curRounds >= maxRounds) {
@@ -1899,10 +1907,18 @@ class PositionedPanelSustainedSpellsIntegration {
       entry.addEventListener('click', async () => {
         if (entry.classList.contains('disabled')) return;
         
-        // Clean up any glow effects before sustaining
+        // Clean up any glow effects before sustaining and add delay to ensure cleanup
         this.highlightTargets(effect, false);
         
-        await this.sustainSpell(actor, effect);
+        // Use setTimeout to ensure glow cleanup happens before any DOM refresh
+        setTimeout(async () => {
+          await this.sustainSpell(actor, effect);
+          
+          // Additional cleanup after sustain in case DOM refresh interrupts
+          setTimeout(() => {
+            this.highlightTargets(effect, false);
+          }, 100);
+        }, 50);
       });
     });
   }
