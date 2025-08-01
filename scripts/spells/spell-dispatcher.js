@@ -309,7 +309,7 @@ async function createSustainingEffectFromConfig(sustainingConfig, spell, caster,
     img: spell.img,
     system: {
       slug: sustainingConfig.slug,
-      description: { value: sustainingConfig.description || spell.system?.description?.value || '' },
+      description: { value: spell.system?.description?.value || '' },
       duration: sustainingConfig.duration,
       start: { value: game.combat ? game.combat.round : 0, initiative: null },
       level: { value: castLevel },
