@@ -257,7 +257,7 @@ export class PF2eHUDSustainedSpellsIntegration {
     const spellType = effect.flags?.world?.sustainedSpell?.spellType;
     
     // For Bless, don't check max rounds since we track aura counter
-    if (spellType !== 'bless' && curRounds >= maxRounds) {
+            if (spellType !== 'self-aura' && curRounds >= maxRounds) {
       ui.notifications.warn('This effect is already at its maximum duration.');
       return;
     }
