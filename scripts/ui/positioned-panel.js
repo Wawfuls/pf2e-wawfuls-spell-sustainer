@@ -160,15 +160,12 @@ export class PositionedPanelSustainedSpellsIntegration {
     // Create a unique identifier for this effect's highlights
     const effectId = effect.id;
     
-    console.log(`[Debug] Highlighting targets for effect ${effect.name} (${effectId}):`, sustainedSpellData.targets);
-    
     // Find tokens for the targets
     const targetTokens = [];
     for (const target of sustainedSpellData.targets) {
       const token = canvas.tokens.placeables.find(t => t.actor?.uuid === target.uuid);
       if (token) {
         targetTokens.push(token);
-        console.log(`[Debug] Found token for ${target.name} (${target.relationship}):`, token.actor.name, 'UUID:', target.uuid);
       }
     }
 
@@ -181,8 +178,6 @@ export class PositionedPanelSustainedSpellsIntegration {
         if (relationship === 'ally') pingColor = 0x4CAF50; // Green
         else if (relationship === 'enemy') pingColor = 0xF44336; // Red
         else if (relationship === 'neutral') pingColor = 0x9E9E9E; // Gray
-        
-        console.log(`[Debug] Pinging ${token.actor.name} with relationship: ${relationship}, color: ${pingColor.toString(16)}`);
         
         // Use Foundry's built-in targeting system like legacy version
         token.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: true });
