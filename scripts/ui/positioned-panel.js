@@ -171,7 +171,7 @@ export class PositionedPanelSustainedSpellsIntegration {
     for (const { token, target } of targetTokens) {
       if (highlight) {
         // Get relationship for color coding
-        const relationship = target.relationship;
+        const relationship = sustainedSpellData.targets.find(t => t.id === token.actor.id)?.relationship;
         let pingColor = 0xFFFFFF; // Default white
         if (relationship === 'ally') pingColor = 0x4CAF50; // Green
         else if (relationship === 'enemy') pingColor = 0xF44336; // Red
@@ -279,6 +279,15 @@ export class PositionedPanelSustainedSpellsIntegration {
     
     const sustainedSpellData = effect.flags?.world?.sustainedSpell;
     
+    // Add special behavior notes to chat
+    let specialNote = '';
+    const spellType = sustainedSpellData?.spellType;
+    if (spellType === 'forbidding-ward') {
+      specialNote = '<br/><em>Sustaining added 1 round to target effects.</em>';
+    } else if (spellType === 'bless') {
+      specialNote = `<br/><em>Aura size increased by 10 feet.</em>`;
+    }
+    
     ChatMessage.create({
       user: game.user.id,
       speaker,
@@ -289,7 +298,7 @@ export class PositionedPanelSustainedSpellsIntegration {
             <h3>${spellName} ${actionGlyph}</h3>
           </header>
           <div class='card-content'>
-            <p><strong>${actor.name} sustained this spell.</strong></p>
+            <p><strong>${actor.name} sustained this spell.</strong>${specialNote}</p>
             <hr />
             ${desc}
           </div>
