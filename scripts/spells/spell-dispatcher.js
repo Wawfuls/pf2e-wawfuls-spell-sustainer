@@ -32,8 +32,8 @@ export async function dispatchSpell(spell, caster, targets, msg, ctx) {
   
   const config = await getSpellConfig(spellName);
   if (!config) {
-    console.log(`[PF2e Spell Sustainer] No configuration found for "${spellName}", using generic handler`);
-    return await handleGenericSpell(spell, caster, targets, msg, ctx);
+    console.log(`[PF2e Spell Sustainer] No configuration found for "${spellName}", ignoring spell (only configured spells get sustaining effects)`);
+    return; // Exit early - only handle explicitly configured spells
   }
   
   console.log(`[PF2e Spell Sustainer] Found configuration for "${spellName}":`, config);
@@ -60,8 +60,9 @@ export async function dispatchSpell(spell, caster, targets, msg, ctx) {
       break;
       
     default:
-      console.warn(`[PF2e Spell Sustainer] Unknown spell type: ${config.spellType}`);
-      await handleGenericSpell(spell, caster, targets, msg, ctx);
+      console.warn(`[PF2e Spell Sustainer] Unknown spell type: ${config.spellType} for ${spell.name}`);
+      ui.notifications.warn(`Unknown spell type "${config.spellType}" for ${spell.name}. Please check spell configuration.`);
+      return;
   }
 }
 
@@ -272,32 +273,4 @@ async function createSustainingEffectFromConfig(sustainingConfig, spell, caster,
   };
 }
 
-// Fallback for spells without configuration
-async function handleGenericSpell(spell, caster, targets, msg, ctx) {
-  console.log(`[PF2e Spell Sustainer] Using generic spell handler for: "${spell.name}"`);
-  
-  // Fall back to generic handling for other spells
-  if (!targets.length) {
-    // If no targets, treat the caster as the target (for self-buffs)
-    targets = [{ actor: caster }];
-  }
-  
-  // Filter out targets that don't have actors
-  const validTargets = targets.filter(tok => tok.actor);
-  if (!validTargets.length) return;
-
-  // Check if this spell requires saving throws
-  const { checkIfSpellRequiresSave } = await import('../core/utils.js');
-  const requiresSave = checkIfSpellRequiresSave(spell);
-  
-  if (requiresSave) {
-    // For save-dependent spells, wait for save results and then apply effects
-    console.log(`[PF2e Spell Sustainer] ${spell.name} requires saves, monitoring for save results...`);
-    const { handleSaveDependentSpell } = await import('../core/message-handler.js');
-    await handleSaveDependentSpell(spell, caster, validTargets, msg, ctx);
-  } else {
-    // For spells that don't require saves, proceed normally
-    const { createSustainedEffects } = await import('../effects/generic.js');
-    await createSustainedEffects(spell, caster, validTargets, msg, ctx);
-  }
-}
+// Note: No generic fallback - only explicitly configured spells get sustaining effects
