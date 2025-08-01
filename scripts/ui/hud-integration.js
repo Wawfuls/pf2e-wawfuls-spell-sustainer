@@ -183,22 +183,32 @@ export class PF2eHUDSustainedSpellsIntegration {
     // Create a unique identifier for this effect's highlights
     const effectId = effect.id;
     
+    console.log(`[Debug] Highlighting targets for effect ${effect.name} (${effectId}):`, sustainedSpellData.targets);
+    
     // Find tokens for the targets
     const targetTokens = [];
     for (const target of sustainedSpellData.targets) {
       const token = canvas.tokens.placeables.find(t => t.actor?.id === target.id);
-      if (token) targetTokens.push({ token, target });
+      if (token) {
+        targetTokens.push(token);
+        console.log(`[Debug] Found token for ${target.name} (${target.relationship}):`, token.actor.name);
+      }
     }
 
     // Apply or remove highlight
-    for (const { token, target } of targetTokens) {
+    for (const token of targetTokens) {
       if (highlight) {
-        // Get relationship for color coding
+        // Get relationship for color coding - use the same lookup as legacy
         const relationship = sustainedSpellData.targets.find(t => t.id === token.actor.id)?.relationship;
         let pingColor = 0xFFFFFF; // Default white
         if (relationship === 'ally') pingColor = 0x4CAF50; // Green
         else if (relationship === 'enemy') pingColor = 0xF44336; // Red
         else if (relationship === 'neutral') pingColor = 0x9E9E9E; // Gray
+        
+        console.log(`[Debug] Pinging ${token.actor.name} with relationship: ${relationship}, color: ${pingColor.toString(16)}`);
+        
+        // Use Foundry's built-in targeting system like legacy version
+        token.setTarget(true, { user: game.user, releaseOthers: false, groupSelection: true });
         
         // Simple ping
         try {
@@ -217,6 +227,7 @@ export class PF2eHUDSustainedSpellsIntegration {
           
           // Clean up if no more highlights
           if (token._sustainHighlights.size === 0) {
+            token.setTarget(false, { user: game.user, releaseOthers: false });
             delete token._sustainHighlights;
           }
         }
@@ -262,7 +273,23 @@ export class PF2eHUDSustainedSpellsIntegration {
     const spellName = effect.flags?.world?.sustainedSpell?.spellName || 
                      effect.name.replace(/^Sustaining: /, '').replace(/ \(\d+ targets?\)$/, '');
     const img = effect.img || 'icons/svg/mystery-man.svg';
-    const desc = effect.system?.description?.value || '';
+    
+    // Get spell description - try the sustained spell data first, then effect description
+    const sustainedSpellData = effect.flags?.world?.sustainedSpell;
+    let desc = sustainedSpellData?.description || effect.system?.description?.value || '';
+    
+    // If no description found, try to get from original spell
+    if (!desc && sustainedSpellData?.spellUuid) {
+      try {
+        const originalSpell = await fromUuid(sustainedSpellData.spellUuid);
+        if (originalSpell) {
+          desc = originalSpell.system?.description?.value || '';
+        }
+      } catch (e) {
+        console.log('Could not fetch original spell description:', e);
+      }
+    }
+    
     const actionGlyph = `<span class='action-glyph'>1</span>`;
     
     const sustainedSpellData = effect.flags?.world?.sustainedSpell;
