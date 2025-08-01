@@ -255,23 +255,9 @@ export class PositionedPanelSustainedSpellsIntegration {
       return;
     }
     
-    // Handle special sustain behaviors based on spell type - import dynamically
-    if (spellType === 'forbidding-ward') {
-      const { handleForbiddingWardSustain } = await import('../sustain/forbidding-ward.js');
-      await handleForbiddingWardSustain(effect, actor);
-    } else if (spellType === 'bless') {
-      const { handleBlessSustain } = await import('../sustain/bless.js');
-      await handleBlessSustain(effect, actor);
-    } else if (spellType === 'rouse-skeletons') {
-      const { handleRouseSkeletonsSustain } = await import('../sustain/rouse-skeletons.js');
-      await handleRouseSkeletonsSustain(actor, effect);
-    } else {
-      // Standard sustain behavior
-      await effect.update({
-        'system.duration.value': Math.min(curRounds + 1, maxRounds),
-        'flags.world.sustainedThisTurn': true
-      });
-    }
+    // Handle sustain behaviors using generic dispatcher
+    const { dispatchSustainBehavior } = await import('../sustain/sustain-dispatcher.js');
+    await dispatchSustainBehavior(spellType, effect, actor);
     
     // Output a chat card - use the same function as HUD integration
     await this.createSustainChatMessage(actor, effect);

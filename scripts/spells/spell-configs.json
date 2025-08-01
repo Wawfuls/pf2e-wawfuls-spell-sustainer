@@ -101,7 +101,7 @@
       "maxSustainRounds": 10,
       "spellType": "forbidding-ward" 
     },
-    "sustainBehavior": "forbidding-ward"
+    "sustainBehavior": "standard"
   },
 
   "bless": {
@@ -125,7 +125,12 @@
         }
       ]
     },
-    "sustainBehavior": "bless"
+    "sustainBehavior": "aura",
+    "aura": {
+      "baseSize": 5,
+      "increment": 10,
+      "maxCounter": 10
+    }
   },
 
   "rouse-skeletons": {
@@ -146,6 +151,7 @@
       "maxSustainRounds": 10,
       "duration": { "value": 1, "unit": "rounds", "sustained": true, "expiry": "turn-end" },
       "spellType": "rouse-skeletons"
-    }
+    },
+    "sustainBehavior": "templated"
   }
 }

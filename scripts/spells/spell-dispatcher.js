@@ -309,7 +309,7 @@ async function createSustainingEffectFromConfig(sustainingConfig, spell, caster,
     img: spell.img,
     system: {
       slug: sustainingConfig.slug,
-      description: { value: sustainingConfig.description },
+      description: { value: sustainingConfig.description || spell.system?.description?.value || '' },
       duration: sustainingConfig.duration,
       start: { value: game.combat ? game.combat.round : 0, initiative: null },
       level: { value: castLevel },
@@ -321,6 +321,7 @@ async function createSustainingEffectFromConfig(sustainingConfig, spell, caster,
         sustainedSpell: {
           spellUuid: spell.uuid,
           spellName: spell.name,
+          description: spell.system?.description?.value || '',
           createdFromChat: msg.id,
           maxSustainRounds: sustainingConfig.maxSustainRounds,
           spellType: sustainingConfig.spellType,
@@ -381,9 +382,9 @@ async function handleMeasuredTemplateSpell(spell, caster, msg, ctx, config) {
   
   console.log(`[PF2e Spell Sustainer] Created sustaining effect for ${spell.name}, template config ready`);
   
-  // Immediately start template placement for initial cast
-  const { handleRouseSkeletonsSustain } = await import('../sustain/rouse-skeletons.js');
-  await handleRouseSkeletonsSustain(caster, sustainingEffect);
+      // Immediately start template placement for initial cast
+    const { handleTemplatedSustain } = await import('../sustain/sustain-templated.js');
+    await handleTemplatedSustain(caster, sustainingEffect, config);
 }
 
 // Note: No generic fallback - only explicitly configured spells get sustaining effects
