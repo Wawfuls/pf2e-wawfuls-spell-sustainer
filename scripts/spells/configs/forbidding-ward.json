@@ -1,0 +1,47 @@
+{
+  "name": "Forbidding Ward",
+  "spellType": "immediate-effects", 
+  "targetRequirement": {
+    "type": "exact",
+    "count": 2,
+    "categories": [
+      { "type": "ally", "count": 1 },
+      { "type": "enemy", "count": 1 }
+    ]
+  },
+  "effects": [
+    {
+      "target": "ally",
+      "name": "Forbidding Ward (Protected)",
+      "slug": "forbidding-ward-ally", 
+      "description": "You are protected by a Forbidding Ward against the linked enemy.",
+      "duration": { "value": 10, "unit": "rounds", "sustained": false },
+      "level": "castLevel",
+      "rules": [
+        {
+          "key": "FlatModifier",
+          "selector": "ac",
+          "value": 1,
+          "type": "status"
+        }
+      ]
+    },
+    {
+      "target": "enemy",
+      "name": "Forbidding Ward (Hindered)", 
+      "slug": "forbidding-ward-enemy",
+      "description": "You are hindered by a Forbidding Ward protecting the linked target.",
+      "duration": { "value": 10, "unit": "rounds", "sustained": false },
+      "level": "castLevel"
+    }
+  ],
+  "sustainingEffect": {
+    "name": "Sustaining: Forbidding Ward",
+    "slug": "sustaining-forbidding-ward",
+    "description": "You are sustaining a Forbidding Ward.",
+    "duration": { "value": 1, "unit": "rounds", "sustained": true },
+    "maxSustainRounds": 10,
+    "spellType": "forbidding-ward" 
+  },
+  "sustainBehavior": "standard"
+}
