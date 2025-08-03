@@ -2,28 +2,11 @@
 
 import { extractCastLevel } from '../core/utils.js';
 
-// Load spell configurations
-let spellConfigs = null;
+// Import the convention-based config loader
+import { getSpellConfig } from './configs/index.js';
 
-async function loadSpellConfigs() {
-  if (!spellConfigs) {
-    try {
-      const { spellConfigs: configs } = await import('./configs/index.js');
-      spellConfigs = configs;
-    } catch (error) {
-      console.error('[PF2e Spell Sustainer] Failed to load spell configurations:', error);
-      spellConfigs = {};
-    }
-  }
-  return spellConfigs;
-}
-
-// Get spell configuration by name
-export async function getSpellConfig(spellName) {
-  const configs = await loadSpellConfigs();
-  const key = spellName.toLowerCase().replace(/\s+/g, '-');
-  return configs[key] || null;
-}
+// Re-export for external use
+export { getSpellConfig };
 
 // Main spell dispatcher - replaces the hardcoded handlers
 export async function dispatchSpell(spell, caster, targets, msg, ctx) {

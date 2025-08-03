@@ -1,14 +1,19 @@
 // Generic sustain behavior dispatcher
-import { spellConfigs } from '../spells/configs/index.js';
+import { getSpellConfig } from '../spells/configs/index.js';
 
 export async function dispatchSustainBehavior(spellType, sustainingEffect, caster) {
   console.log(`[PF2e Spell Sustainer] Dispatching sustain behavior for spell type: ${spellType}`);
   
-  // Get the spell config
-  const spellConfig = Object.values(spellConfigs).find(config => 
-    config.sustainingEffect?.spellType === spellType || 
-    config.spellType === spellType
-  );
+  // Try to get spell config by conventional naming
+  let spellConfig = null;
+  
+  // For self-aura types, try "bless" first (our current aura spell)
+  if (spellType === 'self-aura') {
+    spellConfig = await getSpellConfig('bless');
+  } else {
+    // Try direct lookup by spellType
+    spellConfig = await getSpellConfig(spellType);
+  }
   
   if (!spellConfig) {
     console.warn(`[PF2e Spell Sustainer] No config found for spell type: ${spellType}`);

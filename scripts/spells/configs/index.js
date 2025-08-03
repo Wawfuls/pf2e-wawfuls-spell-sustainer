@@ -1,29 +1,32 @@
-// Dynamic spell config loader
-// Automatically loads all JSON config files in this directory
+// Convention-based spell config loader
+// To add a new spell: just drop the JSON file in this directory!
+// The filename should match the spell name (lowercase, spaces to hyphens)
 
-import evilEyeConfig from './evil-eye.json' with { type: 'json' };
-import needleOfVengeanceConfig from './needle-of-vengeance.json' with { type: 'json' };
-import forbiddingWardConfig from './forbidding-ward.json' with { type: 'json' };
-import blessConfig from './bless.json' with { type: 'json' };
-import rouseSkeletonsConfig from './rouse-skeletons.json' with { type: 'json' };
+// Cache for loaded configs to avoid repeated fetches
+const configCache = new Map();
 
-// Combine all spell configs into a single object using the spell name as key
-export const spellConfigs = {
-  'evil-eye': evilEyeConfig,
-  'needle-of-vengeance': needleOfVengeanceConfig,
-  'forbidding-ward': forbiddingWardConfig,
-  'bless': blessConfig,
-  'rouse-skeletons': rouseSkeletonsConfig
-};
-
-// Export individual configs for direct access if needed
-export {
-  evilEyeConfig,
-  needleOfVengeanceConfig,
-  forbiddingWardConfig,
-  blessConfig,
-  rouseSkeletonsConfig
-};
-
-// Default export for backward compatibility
-export default spellConfigs;
+// Load a specific spell config by name
+export async function getSpellConfig(spellName) {
+  const key = spellName.toLowerCase().replace(/\s+/g, '-');
+  
+  // Return from cache if already loaded
+  if (configCache.has(key)) {
+    return configCache.get(key);
+  }
+  
+  try {
+    const response = await fetch(`./modules/pf2e-wawfuls-spell-sustainer/scripts/spells/configs/${key}.json`);
+    if (response.ok) {
+      const config = await response.json();
+      configCache.set(key, config); // Cache the result
+      return config;
+    }
+  } catch (error) {
+    // Config doesn't exist - that's fine, not all spells need configs
+    console.debug(`[PF2e Spell Sustainer] No config found for spell: ${spellName}`);
+  }
+  
+  // Cache null result to avoid repeated attempts
+  configCache.set(key, null);
+  return null;
+}
