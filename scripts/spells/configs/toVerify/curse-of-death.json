@@ -1,0 +1,37 @@
+{
+  "name": "Curse of Death",
+  "spellType": "save-dependent",
+  "targetRequirement": {
+    "type": "exact",
+    "count": 1,
+    "allowedDispositions": [
+      "hostile",
+      "neutral"
+    ]
+  },
+  "saveType": "fortitude",
+  "saveResults": {
+    "applyEffectOn": [
+      "failure",
+      "criticalFailure"
+    ],
+    "createEffect": true,
+    "effectType": "generic-sustaining"
+  },
+  "effects": [
+    {
+      "target": "enemy",
+      "name": "Curse of Death (Effect)",
+      "slug": "curse-of-death",
+      "description": "You are affected by Curse of Death. {{casterName}} is sustaining this effect.",
+      "duration": {
+        "value": 10,
+        "unit": "rounds",
+        "sustained": false
+      },
+      "level": "castLevel"
+    }
+  ],
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

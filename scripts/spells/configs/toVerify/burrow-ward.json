@@ -1,0 +1,9 @@
+{
+  "name": "Burrow Ward",
+  "spellType": "measured-template",
+  "targetRequirement": {
+    "type": "self-only"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

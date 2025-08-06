@@ -1,0 +1,9 @@
+{
+  "name": "Focusing Hum",
+  "spellType": "measured-template",
+  "targetRequirement": {
+    "type": "self-only"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

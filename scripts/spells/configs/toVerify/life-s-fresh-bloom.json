@@ -1,0 +1,9 @@
+{
+  "name": "Life's Fresh Bloom",
+  "spellType": "measured-template",
+  "targetRequirement": {
+    "type": "none"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

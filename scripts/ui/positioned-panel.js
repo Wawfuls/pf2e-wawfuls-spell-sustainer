@@ -1,5 +1,7 @@
 // Positioned Panel Integration (alternative to PF2e HUD) for sustained spells
 
+import { createSustainMessageFromOriginal } from '../core/utils.js';
+
 export class PositionedPanelSustainedSpellsIntegration {
   constructor() {
     this.enabled = false;
@@ -7,7 +9,7 @@ export class PositionedPanelSustainedSpellsIntegration {
   }
 
   init() {
-    console.log('[PF2e Spell Sustainer] Initializing positioned panel integration');
+    // Initializing positioned panel integration
     this.enabled = true;
     this.setupHooks();
     this.refreshPanel(); // Create initial panel if needed
@@ -129,7 +131,7 @@ export class PositionedPanelSustainedSpellsIntegration {
     document.body.appendChild(panel);
     this.currentPanel = panel;
 
-    console.log(`[PF2e Spell Sustainer] Created positioned panel with ${sustainingEffects.length} sustained spells`);
+    // Created positioned panel
   }
 
   setupEventHandlers(panel, actor, sustainingEffects) {
@@ -201,7 +203,7 @@ export class PositionedPanelSustainedSpellsIntegration {
         try {
           canvas.ping(token.center, { color: pingColor });
         } catch (e) {
-          console.log('Ping failed:', e);
+          // Ping failed
         }
         
         // Add glow filter for enhanced visibility with unique identifier
@@ -220,7 +222,7 @@ export class PositionedPanelSustainedSpellsIntegration {
           token._sustainGlowFilters = token._sustainGlowFilters || new Map();
           token._sustainGlowFilters.set(effectId, glowFilter);
         } catch (e) {
-          console.log('Glow filter failed, using basic highlight');
+          // Glow filter failed
         }
         
         // Mark as highlighted by this effect
@@ -267,65 +269,75 @@ export class PositionedPanelSustainedSpellsIntegration {
     
     // Handle sustain behaviors using generic dispatcher
     const { dispatchSustainBehavior } = await import('../sustain/sustain-dispatcher.js');
-    await dispatchSustainBehavior(spellType, effect, actor);
+    const sustainResult = await dispatchSustainBehavior(spellType, effect, actor);
     
-    // Output a chat card - use the same function as HUD integration
-    await this.createSustainChatMessage(actor, effect);
+    // Only create chat message if sustain was successful (not blocked)
+    if (sustainResult !== false) {
+      await this.createSustainChatMessage(actor, effect);
+    }
 
     // Refresh the panel to show updated state
     this.refreshPanel();
   }
 
   async createSustainChatMessage(actor, effect) {
-    const speaker = ChatMessage.getSpeaker({ actor });
-    const spellName = effect.flags?.world?.sustainedSpell?.spellName || 
-                     effect.name.replace(/^Sustaining: /, '').replace(/ \(\d+ targets?\)$/, '');
-    const img = effect.img || 'icons/svg/mystery-man.svg';
-    
-    // Get spell description - try the sustained spell data first, then effect description
     const sustainedSpellData = effect.flags?.world?.sustainedSpell;
-    let desc = sustainedSpellData?.description || effect.system?.description?.value || '';
-    
-    // If no description found, try to get from original spell
-    if (!desc && sustainedSpellData?.spellUuid) {
-      try {
-        const originalSpell = await fromUuid(sustainedSpellData.spellUuid);
-        if (originalSpell) {
-          desc = originalSpell.system?.description?.value || '';
-        }
-      } catch (e) {
-        console.log('Could not fetch original spell description:', e);
-      }
-    }
-    
-    const actionGlyph = `<span class='action-glyph'>1</span>`;
     
     // Add special behavior notes to chat
     let specialNote = '';
     const spellType = sustainedSpellData?.spellType;
-    if (spellType === 'forbidding-ward') {
-      specialNote = '<br/><em>Sustaining added 1 round to target effects.</em>';
-          } else if (spellType === 'self-aura') {
-      specialNote = `<br/><em>Aura size increased by 10 feet.</em>`;
+    if (spellType === 'self-aura') {
+      // Get aura increment from spell config if available
+      const increment = sustainedSpellData?.auraIncrement || 10;
+      specialNote = `<br/><em>Aura size increased by ${increment} feet.</em>`;
     }
     
-    ChatMessage.create({
-      user: game.user.id,
-      speaker,
-      content: `
-        <div class='pf2e chat-card item-card' data-actor-id='${actor.id}' data-item-id='${effect.id}'>
-          <header class='card-header flexrow'>
-            <img src='${img}' alt='${spellName}' />
-            <h3>${spellName} ${actionGlyph}</h3>
-          </header>
-          <div class='card-content'>
-            <p><strong>${actor.name} sustained this spell.</strong>${specialNote}</p>
-            <hr />
-            ${desc}
+    // Create sustain message from original with all metadata preserved
+    let messageData = createSustainMessageFromOriginal(effect, actor, specialNote);
+    
+    // Fallback to basic message if original content not found
+    if (!messageData) {
+      // Could not create from original message, using fallback
+      const speaker = ChatMessage.getSpeaker({ actor });
+      const spellName = sustainedSpellData?.spellName || 
+                       effect.name.replace(/^Sustaining: /, '').replace(/ \(\d+ targets?\)$/, '');
+      const img = effect.img || 'icons/svg/mystery-man.svg';
+      const actionGlyph = `<span class='action-glyph'>1</span>`;
+      
+      let desc = sustainedSpellData?.description || effect.system?.description?.value || '';
+      
+      // If no description found, try to get from original spell
+      if (!desc && sustainedSpellData?.spellUuid) {
+        try {
+          const originalSpell = await fromUuid(sustainedSpellData.spellUuid);
+          if (originalSpell) {
+            desc = originalSpell.system?.description?.value || '';
+          }
+        } catch (e) {
+          // Could not fetch original spell description
+        }
+      }
+      
+      messageData = {
+        user: game.user.id,
+        speaker,
+        content: `
+          <div class='pf2e chat-card item-card' data-actor-id='${actor.id}' data-item-id='${effect.id}'>
+            <header class='card-header flexrow'>
+              <img src='${img}' alt='${spellName}' />
+              <h3>${spellName} ${actionGlyph}</h3>
+            </header>
+            <div class='card-content'>
+              <p><strong>${actor.name} sustained this spell.</strong>${specialNote}</p>
+              <hr />
+              ${desc}
+            </div>
           </div>
-        </div>
-      `
-    });
+        `
+      };
+    }
+    
+    ChatMessage.create(messageData);
   }
 
   disable() {

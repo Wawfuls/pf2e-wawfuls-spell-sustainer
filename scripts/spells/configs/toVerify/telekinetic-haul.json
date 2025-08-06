@@ -1,0 +1,14 @@
+{
+  "name": "Telekinetic Haul",
+  "spellType": "immediate-effects",
+  "targetRequirement": {
+    "type": "exact",
+    "count": 1,
+    "allowedDispositions": [
+      "hostile",
+      "neutral"
+    ]
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

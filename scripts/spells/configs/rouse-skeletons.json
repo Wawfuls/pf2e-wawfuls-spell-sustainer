@@ -11,6 +11,10 @@
     "width": 0,
     "displayType": "Burst"
   },
+  "range": {
+    "initial": 60,
+    "sustainMove": 20
+  },
   "sustainingEffect": {
     "name": "Sustaining: Rouse Skeletons", 
     "slug": "sustaining-rouse-skeletons",

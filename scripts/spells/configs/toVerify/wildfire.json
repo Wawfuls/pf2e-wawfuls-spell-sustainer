@@ -1,0 +1,9 @@
+{
+  "name": "Wildfire",
+  "spellType": "measured-template",
+  "targetRequirement": {
+    "type": "none"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

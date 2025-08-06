@@ -1,0 +1,9 @@
+{
+  "name": "Synchronize Steps",
+  "spellType": "immediate-effects",
+  "targetRequirement": {
+    "type": "none"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

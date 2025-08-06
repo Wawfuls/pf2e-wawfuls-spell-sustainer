@@ -1,0 +1,9 @@
+{
+  "name": "Weapon Trance",
+  "spellType": "immediate-effects",
+  "targetRequirement": {
+    "type": "none"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

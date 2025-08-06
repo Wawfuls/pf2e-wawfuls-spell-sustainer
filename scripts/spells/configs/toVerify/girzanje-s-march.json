@@ -1,0 +1,9 @@
+{
+  "name": "Girzanje's March",
+  "spellType": "measured-template",
+  "targetRequirement": {
+    "type": "none"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

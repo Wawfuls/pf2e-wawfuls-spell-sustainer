@@ -1,0 +1,9 @@
+{
+  "name": "Aura of the Unremarkable",
+  "spellType": "measured-template",
+  "targetRequirement": {
+    "type": "self-only"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

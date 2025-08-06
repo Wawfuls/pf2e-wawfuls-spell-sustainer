@@ -1,0 +1,17 @@
+{
+  "name": "Spiritual Armament",
+  "spellType": "self-aura",
+  "targetRequirement": {
+    "type": "self-only"
+  },
+  "allowMultipleSustainsPerTurn": true,
+  "sustainingEffect": {
+    "name": "Sustaining: Spiritual Armament",
+    "slug": "sustaining-spiritual-armament", 
+    "description": "You are sustaining a Spiritual Armament spell.",
+    "duration": { "value": 1, "unit": "rounds", "sustained": true },
+    "maxSustainRounds": 10,
+    "spellType": "standard"
+  },
+  "sustainBehavior": "standard"
+}

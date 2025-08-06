@@ -1,0 +1,32 @@
+{
+  "name": "Drop Dead", 
+  "spellType": "immediate-effects",
+  "targetRequirement": {
+    "type": "exact",
+    "count": 1,
+    "categories": [
+      { "type": "ally", "count": 1 }
+    ]
+  },
+  "effects": [
+    {
+      "target": "ally",
+      "name": "Drop Dead (Ally)",
+      "slug": "drop-dead-ally",
+      "description": "You appear to fall down dead. You are @UUID[Compendium.pf2e.conditionitems.Item.zJxUflt9np0q4yML]{Invisible}. Your illusory corpse remains where it fell, complete with a believable fatal wound. This illusion looks and feels like a dead body. If you use hostile actions, the spell ends. This ends the entire spell, so the illusory corpse disappears too.",
+      "duration": { "value": 10, "unit": "rounds", "sustained": false },
+      "level": "castLevel",
+      "rules": [
+        {
+          "key": "GrantItem",
+          "uuid": "Compendium.pf2e.conditionitems.Item.zJxUflt9np0q4yML",
+          "flag": "invisible",
+          "onDeleteActions": {
+            "grantee": "restrict"
+          }
+        }
+      ]
+    }
+  ],
+  "sustainBehavior": "standard"
+}

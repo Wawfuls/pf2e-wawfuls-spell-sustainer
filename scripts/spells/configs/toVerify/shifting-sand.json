@@ -1,0 +1,9 @@
+{
+  "name": "Shifting Sand",
+  "spellType": "measured-template",
+  "targetRequirement": {
+    "type": "none"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

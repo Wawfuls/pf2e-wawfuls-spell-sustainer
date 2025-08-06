@@ -1,0 +1,9 @@
+{
+  "name": "Fallow Field",
+  "spellType": "measured-template",
+  "targetRequirement": {
+    "type": "none"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

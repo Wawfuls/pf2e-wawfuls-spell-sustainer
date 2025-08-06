@@ -1,0 +1,14 @@
+{
+  "name": "Unbreaking Wave Containment",
+  "spellType": "immediate-effects",
+  "targetRequirement": {
+    "type": "exact",
+    "count": 4,
+    "allowedDispositions": [
+      "hostile",
+      "neutral"
+    ]
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

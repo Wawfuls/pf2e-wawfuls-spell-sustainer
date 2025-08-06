@@ -1,5 +1,7 @@
 // Traditional sustain dialog (legacy macro functionality)
 
+import { createSustainMessageFromOriginal } from '../core/utils.js';
+
 // Global state for dialog management
 export let currentSustainDialog = null;
 export let currentSustainDialogActor = null;
@@ -7,19 +9,19 @@ export let currentlyHighlighted = null;
 
 // Function to show the sustain dialog (legacy macro functionality)
 export function showSustainDialog(actor) {
-  console.log(`[PF2e Spell Sustainer] Opening sustain dialog for ${actor.name}`);
+  // Opening sustain dialog
   
   // Close existing dialog first
   if (currentSustainDialog) {
     currentSustainDialog.close();
     currentSustainDialog = null;
     currentSustainDialogActor = null;
-    console.log(`[PF2e Spell Sustainer] Closed existing dialog`);
+    // Closed existing dialog
   }
   
   // Set current dialog actor
   currentSustainDialogActor = actor;
-  console.log(`[PF2e Spell Sustainer] Set dialog actor to:`, currentSustainDialogActor.name);
+  // Set dialog actor
   
   // Find sustained spells
   const sustainingEffects = actor.itemTypes.effect.filter(e =>
@@ -174,23 +176,14 @@ export function showSustainDialog(actor) {
           // Handle special sustain behaviors based on spell type
           const sustainedSpellData = effect.flags?.world?.sustainedSpell;
           
-          if (spellType === 'forbidding-ward') {
-            const { handleForbiddingWardSustain } = await import('../sustain/forbidding-ward.js');
-            await handleForbiddingWardSustain(effect, actor);
-          } else if (spellType === 'self-aura') {
-            // For backwards compatibility, assume this is Bless - the sustain dispatcher should handle this
-            const { dispatchSustainBehavior } = await import('../sustain/sustain-dispatcher.js');
-            await dispatchSustainBehavior(spellType, effect, actor);
-          } else {
-            // Standard sustain behavior
-            await effect.update({
-              'system.duration.value': Math.min(curRounds + 1, maxRounds),
-              'flags.world.sustainedThisTurn': true
-            });
-          }
+          // Handle sustain behaviors using generic dispatcher
+          const { dispatchSustainBehavior } = await import('../sustain/sustain-dispatcher.js');
+          const sustainResult = await dispatchSustainBehavior(spellType, effect, actor);
           
-          // Create chat message
-          await createSustainChatMessage(actor, effect);
+          // Only create chat message if sustain was successful (not blocked)
+          if (sustainResult !== false) {
+            await createSustainChatMessage(actor, effect);
+          }
           
           // Refresh the dialog content to show updated information
           setTimeout(() => {
@@ -207,7 +200,7 @@ export function showSustainDialog(actor) {
       }
       currentSustainDialog = null;
       currentSustainDialogActor = null;
-      console.log(`[PF2e Spell Sustainer] Dialog closed and cleaned up`);
+      // Dialog closed and cleaned up
     }
   });
 
@@ -216,12 +209,8 @@ export function showSustainDialog(actor) {
 
 // Function to refresh the sustain dialog if it's open
 export function refreshSustainDialog() {
-  console.log(`[PF2e Spell Sustainer] refreshSustainDialog called`);
-  console.log(`[PF2e Spell Sustainer] currentSustainDialog:`, !!currentSustainDialog);
-  console.log(`[PF2e Spell Sustainer] currentSustainDialogActor:`, currentSustainDialogActor?.name);
   
   if (!currentSustainDialog || !currentSustainDialogActor) {
-    console.log(`[PF2e Spell Sustainer] No dialog to refresh`);
     return;
   }
 
@@ -233,17 +222,15 @@ export function refreshSustainDialog() {
     (e.name && e.name.startsWith('Sustaining: '))
   );
 
-  console.log(`[PF2e Spell Sustainer] Found ${sustainingEffects.length} sustaining effects for refresh`);
+  // Found sustaining effects for refresh
 
   if (sustainingEffects.length === 0) {
     // No more sustained spells, close the dialog
-    console.log(`[PF2e Spell Sustainer] No more sustained spells, closing dialog`);
     currentSustainDialog.close();
     return;
   }
 
   // Re-open the dialog with updated data
-  console.log(`[PF2e Spell Sustainer] Refreshing dialog with updated data`);
   const position = currentSustainDialog.position;
   currentSustainDialog.close();
   
@@ -285,7 +272,7 @@ function highlightTargets(effect, highlight = true) {
       try {
         canvas.ping(token.center, { color: pingColor });
       } catch (e) {
-        console.log('Ping failed:', e);
+        // Ping failed
       }
       
       token._sustainHighlight = true;
@@ -301,39 +288,49 @@ function highlightTargets(effect, highlight = true) {
 
 // Helper function to create chat message for sustain action
 async function createSustainChatMessage(actor, effect) {
-  const speaker = ChatMessage.getSpeaker({ actor });
-  const spellName = effect.flags?.world?.sustainedSpell?.spellName || 
-                   effect.name.replace(/^Sustaining: /, '').replace(/ \(\d+ targets?\)$/, '');
-  const img = effect.img || 'icons/svg/mystery-man.svg';
-  const desc = effect.system?.description?.value || '';
-  const actionGlyph = `<span class='action-glyph'>1</span>`;
-  
   const sustainedSpellData = effect.flags?.world?.sustainedSpell;
   
   // Add special behavior notes to chat
   let specialNote = '';
   const spellType = sustainedSpellData?.spellType;
-  if (spellType === 'forbidding-ward') {
-    specialNote = '<br/><em>Sustaining added 1 round to target effects.</em>';
-        } else if (spellType === 'self-aura') {
-    specialNote = `<br/><em>Aura size increased by 10 feet.</em>`;
+  if (spellType === 'self-aura') {
+    // Get aura increment from spell config if available
+    const increment = sustainedSpellData?.auraIncrement || 10;
+    specialNote = `<br/><em>Aura size increased by ${increment} feet.</em>`;
   }
   
-  ChatMessage.create({
-    user: game.user.id,
-    speaker,
-    content: `
-      <div class='pf2e chat-card item-card' data-actor-id='${actor.id}' data-item-id='${effect.id}'>
-        <header class='card-header flexrow'>
-          <img src='${img}' alt='${spellName}' />
-          <h3>${spellName} ${actionGlyph}</h3>
-        </header>
-        <div class='card-content'>
-          <p><strong>${actor.name} sustained this spell.</strong>${specialNote}</p>
-          <hr />
-          ${desc}
+  // Create sustain message from original with all metadata preserved
+  let messageData = createSustainMessageFromOriginal(effect, actor, specialNote);
+  
+  // Fallback to basic message if original content not found
+  if (!messageData) {
+    // Could not create from original message, using fallback
+    const speaker = ChatMessage.getSpeaker({ actor });
+    const spellName = sustainedSpellData?.spellName || 
+                     effect.name.replace(/^Sustaining: /, '').replace(/ \(\d+ targets?\)$/, '');
+    const img = effect.img || 'icons/svg/mystery-man.svg';
+    const actionGlyph = `<span class='action-glyph'>1</span>`;
+    
+    let desc = sustainedSpellData?.description || effect.system?.description?.value || '';
+    
+    messageData = {
+      user: game.user.id,
+      speaker,
+      content: `
+        <div class='pf2e chat-card item-card' data-actor-id='${actor.id}' data-item-id='${effect.id}'>
+          <header class='card-header flexrow'>
+            <img src='${img}' alt='${spellName}' />
+            <h3>${spellName} ${actionGlyph}</h3>
+          </header>
+          <div class='card-content'>
+            <p><strong>${actor.name} sustained this spell.</strong>${specialNote}</p>
+            <hr />
+            ${desc}
+          </div>
         </div>
-      </div>
-    `
-  });
+      `
+    };
+  }
+  
+  ChatMessage.create(messageData);
 }

@@ -97,7 +97,7 @@ export function extractCastLevel(msg, ctx, spell) {
     const castRankMatch = msg.content.match(/data-cast-rank="(\d+)"/);
     if (castRankMatch) {
       castLevel = Number(castRankMatch[1]);
-      console.log(`[PF2e Spell Sustainer] Found cast rank from message content: ${castLevel}`);
+      // Found cast rank from message content
       return castLevel;
     }
   }
@@ -107,7 +107,7 @@ export function extractCastLevel(msg, ctx, spell) {
   const itemLevelOption = rollOptions.find(option => option.startsWith('item:level:'));
   if (itemLevelOption) {
     castLevel = Number(itemLevelOption.split(':')[2]);
-    console.log(`[PF2e Spell Sustainer] Found cast level from roll options: ${castLevel}`);
+    // Found cast level from roll options
     return castLevel;
   }
   
@@ -122,9 +122,70 @@ export function extractCastLevel(msg, ctx, spell) {
   );
   
   if (castLevel && castLevel !== 1) {
-    console.log(`[PF2e Spell Sustainer] Found cast level from context/spell data: ${castLevel}`);
+    // Found cast level from context/spell data
   }
   
   if (!castLevel || isNaN(castLevel)) castLevel = 1;
   return castLevel;
+}
+
+// Create sustain chat message by duplicating original message with sustain note added
+export function createSustainMessageFromOriginal(effect, actor, specialNote = '') {
+  try {
+    const originalMessageId = effect.flags?.world?.sustainedSpell?.createdFromChat;
+    if (!originalMessageId) {
+      // No original message ID found
+      return null;
+    }
+
+    const originalMessage = game.messages.get(originalMessageId);
+    if (!originalMessage) {
+      // Original message not found
+      return null;
+    }
+
+    // Duplicate the original message data
+    const messageData = originalMessage.toObject();
+    
+    // Parse the HTML to inject our sustain message
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(messageData.content, 'text/html');
+    
+    // Find the card-content section
+    const cardContent = doc.querySelector('.card-content, section.card-content');
+    if (cardContent) {
+      // Create the sustain message element
+      const sustainMessage = doc.createElement('p');
+      sustainMessage.innerHTML = `<strong>${actor.name} sustained this spell.</strong>${specialNote}`;
+      
+      // Insert it at the beginning of card-content
+      cardContent.insertBefore(sustainMessage, cardContent.firstChild);
+      
+      // If there's not already an hr separator, add one
+      if (!sustainMessage.nextElementSibling || sustainMessage.nextElementSibling.tagName.toLowerCase() !== 'hr') {
+        const hr = doc.createElement('hr');
+        cardContent.insertBefore(hr, sustainMessage.nextSibling);
+      }
+    }
+
+    // Update the content with the modified HTML
+    messageData.content = doc.documentElement.innerHTML;
+    
+    // Remove the original message ID to avoid conflicts
+    delete messageData._id;
+    
+    // Update timestamp to current time
+    messageData.timestamp = Date.now();
+    
+    // Add flag to indicate this is a sustain message (prevents hook from processing it as original cast)
+    if (!messageData.flags) messageData.flags = {};
+    if (!messageData.flags.world) messageData.flags.world = {};
+    messageData.flags.world.sustainMessage = true;
+    
+    return messageData;
+
+  } catch (error) {
+    console.error(`[PF2e Spell Sustainer] Error creating sustain message from original:`, error);
+    return null;
+  }
 }

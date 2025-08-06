@@ -1,0 +1,9 @@
+{
+  "name": "Friendly Push",
+  "spellType": "immediate-effects",
+  "targetRequirement": {
+    "type": "none"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

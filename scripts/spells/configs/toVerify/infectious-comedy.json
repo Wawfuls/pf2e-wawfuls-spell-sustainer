@@ -1,0 +1,37 @@
+{
+  "name": "Infectious Comedy",
+  "spellType": "save-dependent",
+  "targetRequirement": {
+    "type": "exact",
+    "count": 1,
+    "allowedDispositions": [
+      "hostile",
+      "neutral"
+    ]
+  },
+  "saveType": "will",
+  "saveResults": {
+    "applyEffectOn": [
+      "failure",
+      "criticalFailure"
+    ],
+    "createEffect": true,
+    "effectType": "generic-sustaining"
+  },
+  "effects": [
+    {
+      "target": "enemy",
+      "name": "Infectious Comedy (Effect)",
+      "slug": "infectious-comedy",
+      "description": "You are affected by Infectious Comedy. {{casterName}} is sustaining this effect.",
+      "duration": {
+        "value": 10,
+        "unit": "rounds",
+        "sustained": false
+      },
+      "level": "castLevel"
+    }
+  ],
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

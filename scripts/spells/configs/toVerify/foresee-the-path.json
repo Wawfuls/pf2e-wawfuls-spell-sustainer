@@ -1,0 +1,13 @@
+{
+  "name": "Foresee the Path",
+  "spellType": "immediate-effects",
+  "targetRequirement": {
+    "type": "exact",
+    "count": 1,
+    "allowedDispositions": [
+      "ally"
+    ]
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

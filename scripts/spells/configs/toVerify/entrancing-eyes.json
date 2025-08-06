@@ -1,0 +1,9 @@
+{
+  "name": "Entrancing Eyes",
+  "spellType": "measured-template",
+  "targetRequirement": {
+    "type": "self-only"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

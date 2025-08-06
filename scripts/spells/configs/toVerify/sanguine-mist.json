@@ -1,0 +1,9 @@
+{
+  "name": "Sanguine Mist",
+  "spellType": "measured-template",
+  "targetRequirement": {
+    "type": "none"
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

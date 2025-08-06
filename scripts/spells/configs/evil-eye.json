@@ -7,10 +7,21 @@
     "allowedDispositions": ["hostile", "neutral"]
   },
   "saveType": "will",
-  "onFailedSave": {
+  "saveResults": {
+    "applyEffectOn": ["failure", "criticalFailure"],
     "createEffect": true,
     "effectType": "generic-sustaining"
   },
+  "effects": [
+    {
+      "target": "enemy",
+      "name": "Evil Eye (Hindered)", 
+      "slug": "evil-eye-enemy",
+      "description": "You are sickened by Evil Eye. This condition value can't be reduced below 1 while the spell is active and you can see {{casterName}}.",
+      "duration": { "value": 10, "unit": "rounds", "sustained": false },
+      "level": "castLevel"
+    }
+  ],
   "maxSustainRounds": 10,
   "sustainBehavior": "standard"
 }

@@ -1,6 +1,7 @@
 // PF2e Wawful's Spell Sustainer - Main Entry Point (Refactored)
 
 import { handleSustainedSpellCast } from './core/message-handler.js';
+
 import { dispatchSpell } from './spells/spell-dispatcher.js';
 import { PF2eHUDSustainedSpellsIntegration } from './ui/hud-integration.js';
 import { PositionedPanelSustainedSpellsIntegration } from './ui/positioned-panel.js';
@@ -12,11 +13,11 @@ let positionedPanelIntegration = null;
 
 // Initialize the module
 Hooks.once('init', () => {
-  console.log('PF2e Wawful\'s Spell Sustainer | Initializing module');
+  // Initializing module
 });
 
 Hooks.once('ready', () => {
-  console.log('PF2e Wawful\'s Spell Sustainer | Module ready');
+  // Module ready
   
   // Initialize UI integrations
   hudIntegration = new PF2eHUDSustainedSpellsIntegration();
@@ -25,18 +26,42 @@ Hooks.once('ready', () => {
   positionedPanelIntegration = new PositionedPanelSustainedSpellsIntegration();
   positionedPanelIntegration.init();
   
-  console.log('[PF2e Spell Sustainer] All integrations initialized');
+      // All integrations initialized
 });
 
 // Main spell handling hook
 Hooks.on('createChatMessage', handleSustainedSpellCast);
+
+// Hook to reset sustainedThisTurn flags at the start of each combat turn
+Hooks.on('combatTurn', async (combat, updateData, options) => {
+  if (!game.user.isGM) return; // Only GM should handle this
+  
+  const currentCombatant = combat.combatant;
+  if (!currentCombatant?.actor) return;
+  
+  const actor = currentCombatant.actor;
+  
+  // Find all sustaining effects for this actor
+  const sustainingEffects = actor.itemTypes.effect.filter(e =>
+    (e.slug && e.slug.startsWith('sustaining-')) ||
+    (e.name && e.name.startsWith('Sustaining: '))
+  );
+  
+  // Reset sustainedThisTurn flag for all sustaining effects
+  for (const effect of sustainingEffects) {
+    if (effect.flags?.world?.sustainedThisTurn) {
+      await effect.update({
+        'flags.world.sustainedThisTurn': false
+      });
+    }
+  }
+});
 
 // Hook to refresh positioned panel when sustaining effects change
 Hooks.on('updateActor', (actor, data, options, userId) => {
   // Refresh positioned panel if this is the current controlled actor
   const currentActor = canvas.tokens?.controlled?.[0]?.actor || game.user?.character;
   if (currentActor && actor.id === currentActor.id && positionedPanelIntegration?.enabled) {
-    console.log('[PF2e Spell Sustainer] Actor updated, refreshing positioned panel');
     setTimeout(() => {
       positionedPanelIntegration.refreshPanel();
     }, 100);
@@ -50,23 +75,21 @@ Hooks.on('updateActor', (actor, data, options, userId) => {
   }
 });
 
-// Hook to refresh positioned panel when items (effects) are created/deleted
+// Hook to refresh UI when sustaining effects are created
 Hooks.on('createItem', (item, options, userId) => {
-  console.log('[PF2e Spell Sustainer] createItem hook fired:', item.name, item.type);
-  
   if (item.type === 'effect' && item.parent?.type === 'character') {
     const actor = item.parent;
-    console.log('[PF2e Spell Sustainer] Effect created on character:', actor.name);
     
     // Check if this is a sustaining effect
     const isSustainingEffect = (item.slug && item.slug.startsWith('sustaining-')) || 
                               (item.name && item.name.startsWith('Sustaining: '));
     
     if (isSustainingEffect) {
+      // Sustaining effect created
+      
       // Refresh positioned panel if this is the current controlled actor
       const currentActor = canvas.tokens?.controlled?.[0]?.actor || game.user?.character;
       if (currentActor && actor.id === currentActor.id && positionedPanelIntegration?.enabled) {
-        console.log('[PF2e Spell Sustainer] Sustaining effect created, refreshing positioned panel:', item.name);
         setTimeout(() => {
           positionedPanelIntegration.refreshPanel();
         }, 100);
@@ -74,7 +97,6 @@ Hooks.on('createItem', (item, options, userId) => {
       
       // Also refresh dialog if it's open and this is the dialog actor
       if (currentSustainDialogActor && actor.id === currentSustainDialogActor.id) {
-        console.log('[PF2e Spell Sustainer] Sustaining effect created, refreshing dialog:', item.name);
         setTimeout(() => {
           refreshSustainDialog();
         }, 100);
@@ -117,7 +139,6 @@ Hooks.on('deleteItem', async (item, options, userId) => {
               .map(e => e.id);
             if (ids.length) {
               await gameActor.deleteEmbeddedDocuments('Item', ids);
-              ids.forEach(id => console.log(`[PF2e Spell Sustainer] Removed linked sustained effect from ${gameActor.name}`));
               totalRemoved += ids.length;
             }
           } catch (actorError) {
@@ -126,7 +147,7 @@ Hooks.on('deleteItem', async (item, options, userId) => {
           }
         }
         
-        console.log(`[PF2e Spell Sustainer] Removed ${totalRemoved} linked effects for ${item.name}`);
+        // Removed linked effects
         
         // Clean up linked measured template if any
         const templateId = sustainedSpellData.templateId;
@@ -135,7 +156,7 @@ Hooks.on('deleteItem', async (item, options, userId) => {
             const template = canvas.templates.get(templateId);
             if (template) {
               await template.document.delete();
-              console.log(`[PF2e Spell Sustainer] Removed linked template for ${item.name}`);
+              // Removed linked template
             }
           } catch (templateError) {
             console.warn(`[PF2e Spell Sustainer] Could not clean up template:`, templateError);
@@ -195,4 +216,4 @@ window.PF2eWawfulsSpellSustainer = {
   version: '0.4.0-dev'
 };
 
-console.log('[PF2e Spell Sustainer] API exposed to window.PF2eWawfulsSpellSustainer');
+  // API exposed to global window

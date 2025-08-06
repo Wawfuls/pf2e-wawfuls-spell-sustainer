@@ -1,0 +1,14 @@
+{
+  "name": "Domora's Defense",
+  "spellType": "immediate-effects",
+  "targetRequirement": {
+    "type": "exact",
+    "count": 3,
+    "allowedDispositions": [
+      "hostile",
+      "neutral"
+    ]
+  },
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

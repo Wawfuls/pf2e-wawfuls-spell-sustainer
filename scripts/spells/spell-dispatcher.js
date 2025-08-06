@@ -11,15 +11,11 @@ export { getSpellConfig };
 // Main spell dispatcher - replaces the hardcoded handlers
 export async function dispatchSpell(spell, caster, targets, msg, ctx) {
   const spellName = spell.name.toLowerCase();
-  console.log(`[PF2e Spell Sustainer] Dispatching spell: "${spellName}"`);
-  
   const config = await getSpellConfig(spellName);
   if (!config) {
-    console.log(`[PF2e Spell Sustainer] No configuration found for "${spellName}", ignoring spell (only configured spells get sustaining effects)`);
-    return; // Exit early - only handle explicitly configured spells
+    // Only configured spells get sustaining effects
+    return;
   }
-  
-  console.log(`[PF2e Spell Sustainer] Found configuration for "${spellName}":`, config);
   
   // Validate targets based on configuration
   const validTargets = validateTargets(config.targetRequirement, targets, caster);
@@ -89,6 +85,32 @@ function validateTargets(requirement, targets, caster) {
       
       return { success: true, targets: categorizedTargets };
     }
+    
+    // Check allowedDispositions if specified
+    if (requirement.allowedDispositions) {
+      const categorizedTargets = categorizeTargets(validTargets, caster);
+      
+      const allowedTargets = [];
+      for (const disposition of requirement.allowedDispositions) {
+        if (disposition === 'hostile') {
+          allowedTargets.push(...categorizedTargets.enemy);
+        } else if (disposition === 'neutral') {
+          allowedTargets.push(...categorizedTargets.neutral);
+        } else if (disposition === 'ally') {
+          allowedTargets.push(...categorizedTargets.ally);
+        }
+      }
+      
+      if (allowedTargets.length < requirement.count) {
+        const dispositionNames = requirement.allowedDispositions.join(' or ');
+        return {
+          success: false,
+          error: `This spell requires exactly ${requirement.count} ${dispositionNames} target${requirement.count > 1 ? 's' : ''}. Found ${allowedTargets.length} valid targets.`
+        };
+      }
+      
+      return { success: true, targets: allowedTargets.slice(0, requirement.count) };
+    }
   }
   
   return { success: true, targets: validTargets };
@@ -113,16 +135,16 @@ function categorizeTargets(targets, caster) {
 
 // Handle save-dependent spells
 async function handleSaveDependentSpell(spell, caster, targets, msg, ctx, config) {
-  console.log(`[PF2e Spell Sustainer] Handling save-dependent spell with config`);
+  //  Handling save-dependent spell with config:`, config);
   
   // Import the save handler
   const { handleSaveDependentSpell: handleSaves } = await import('../core/message-handler.js');
-  await handleSaves(spell, caster, targets, msg, ctx);
+  await handleSaves(spell, caster, targets, msg, ctx, config);
 }
 
 // Handle spells with immediate effects
 async function handleImmediateEffectsSpell(spell, caster, categorizedTargets, msg, ctx, config) {
-  console.log(`[PF2e Spell Sustainer] Handling immediate effects spell with config`);
+  //  Handling immediate effects spell with config`);
   
   const castLevel = extractCastLevel(msg, ctx, spell);
   
@@ -133,7 +155,7 @@ async function handleImmediateEffectsSpell(spell, caster, categorizedTargets, ms
   // Check if this exact sustaining effect already exists
   let existing = caster.itemTypes.effect.find(e => e.slug === sustainingSlug);
   if (existing) {
-    console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for this spell cast (${spell.name}), skipping duplicate creation`);
+    //  Sustaining effect already exists for this spell cast (${spell.name}), skipping duplicate creation`);
     return;
   }
   
@@ -142,7 +164,7 @@ async function handleImmediateEffectsSpell(spell, caster, categorizedTargets, ms
     e.flags?.world?.sustainedSpell?.createdFromChat === msg.id
   );
   if (existingByChatId) {
-    console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for chat message ${msg.id}, skipping duplicate creation`);
+    //  Sustaining effect already exists for chat message ${msg.id}, skipping duplicate creation`);
     return;
   }
 
@@ -184,7 +206,7 @@ async function handleImmediateEffectsSpell(spell, caster, categorizedTargets, ms
     // Create the sustaining effect first
     const createdEffects = await caster.createEmbeddedDocuments('Item', [sustainingData]);
     sustainingEffect = createdEffects[0];
-    console.log(`[PF2e Spell Sustainer] Created sustaining effect: ${sustainingEffect.name}`);
+    //  Created sustaining effect: ${sustainingEffect.name}`);
   }
   
   // Now create child effects with proper sustainedBy links
@@ -205,12 +227,12 @@ async function handleImmediateEffectsSpell(spell, caster, categorizedTargets, ms
     await actor.createEmbeddedDocuments('Item', [effect]);
   }
   
-  console.log(`[PF2e Spell Sustainer] Applied ${config.name} effects to targets`);
+  //  Applied ${config.name} effects to targets`);
 }
 
 // Handle self-aura spells (like Bless)
 async function handleSelfAuraSpell(spell, caster, msg, ctx, config) {
-  console.log(`[PF2e Spell Sustainer] Handling self-aura spell with config`);
+  //  Handling self-aura spell with config`);
   
   // Safety check: ensure we don't create duplicate effects for the same spell cast
   const spellSlug = spell.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -219,7 +241,7 @@ async function handleSelfAuraSpell(spell, caster, msg, ctx, config) {
   // Check if this exact sustaining effect already exists
   let existing = caster.itemTypes.effect.find(e => e.slug === sustainingSlug);
   if (existing) {
-    console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for this spell cast (${spell.name}), skipping duplicate creation`);
+    //  Sustaining effect already exists for this spell cast (${spell.name}), skipping duplicate creation`);
     return;
   }
   
@@ -228,7 +250,7 @@ async function handleSelfAuraSpell(spell, caster, msg, ctx, config) {
     e.flags?.world?.sustainedSpell?.createdFromChat === msg.id
   );
   if (existingByChatId) {
-    console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for chat message ${msg.id}, skipping duplicate creation`);
+    //  Sustaining effect already exists for chat message ${msg.id}, skipping duplicate creation`);
     return;
   }
   
@@ -249,8 +271,13 @@ async function handleSelfAuraSpell(spell, caster, msg, ctx, config) {
     { ally: [{ actor: caster }] }
   );
   
+  // Add aura configuration to sustaining effect for self-aura spells
+  if (config.aura?.increment) {
+    sustainingData.flags.world.sustainedSpell.auraIncrement = config.aura.increment;
+  }
+  
   await caster.createEmbeddedDocuments('Item', [sustainingData]);
-  console.log(`[PF2e Spell Sustainer] Applied ${config.name} effect to ${caster.name}`);
+  //  Applied ${config.name} effect to ${caster.name}`);
 }
 
 // Create effect data from configuration
@@ -321,7 +348,7 @@ async function createSustainingEffectFromConfig(sustainingConfig, spell, caster,
 
 // Handle measured template spells
 async function handleMeasuredTemplateSpell(spell, caster, msg, ctx, config) {
-  console.log(`[PF2e Spell Sustainer] Handling measured template spell with config`);
+  //  Handling measured template spell with config`);
   
   const castLevel = extractCastLevel(msg, ctx, spell);
   
@@ -332,7 +359,7 @@ async function handleMeasuredTemplateSpell(spell, caster, msg, ctx, config) {
   // Check if this exact sustaining effect already exists
   let existing = caster.itemTypes.effect.find(e => e.slug === sustainingSlug);
   if (existing) {
-    console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for this spell cast (${spell.name}), skipping duplicate creation`);
+    //  Sustaining effect already exists for this spell cast (${spell.name}), skipping duplicate creation`);
     return;
   }
   
@@ -341,7 +368,7 @@ async function handleMeasuredTemplateSpell(spell, caster, msg, ctx, config) {
     e.flags?.world?.sustainedSpell?.createdFromChat === msg.id
   );
   if (existingByChatId) {
-    console.log(`[PF2e Spell Sustainer] Effect already exists for this chat message, skipping duplicate creation`);
+    //  Effect already exists for this chat message, skipping duplicate creation`);
     return;
   }
 
@@ -363,7 +390,7 @@ async function handleMeasuredTemplateSpell(spell, caster, msg, ctx, config) {
   const createdEffects = await caster.createEmbeddedDocuments('Item', [sustainingEffectData]);
   const sustainingEffect = createdEffects[0];
   
-  console.log(`[PF2e Spell Sustainer] Created sustaining effect for ${spell.name}, template config ready`);
+  //  Created sustaining effect for ${spell.name}, template config ready`);
   
       // Immediately start template placement for initial cast (no duration increment)
     const { handleInitialTemplatePlace } = await import('../sustain/sustain-templated.js');

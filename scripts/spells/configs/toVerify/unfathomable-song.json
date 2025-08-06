@@ -1,0 +1,37 @@
+{
+  "name": "Unfathomable Song",
+  "spellType": "save-dependent",
+  "targetRequirement": {
+    "type": "exact",
+    "count": 5,
+    "allowedDispositions": [
+      "hostile",
+      "neutral"
+    ]
+  },
+  "saveType": "will",
+  "saveResults": {
+    "applyEffectOn": [
+      "failure",
+      "criticalFailure"
+    ],
+    "createEffect": true,
+    "effectType": "generic-sustaining"
+  },
+  "effects": [
+    {
+      "target": "enemy",
+      "name": "Unfathomable Song (Effect)",
+      "slug": "unfathomable-song",
+      "description": "You are affected by Unfathomable Song. {{casterName}} is sustaining this effect.",
+      "duration": {
+        "value": 10,
+        "unit": "rounds",
+        "sustained": false
+      },
+      "level": "castLevel"
+    }
+  ],
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

@@ -1,0 +1,37 @@
+{
+  "name": "Stumbling Curse",
+  "spellType": "save-dependent",
+  "targetRequirement": {
+    "type": "exact",
+    "count": 1,
+    "allowedDispositions": [
+      "hostile",
+      "neutral"
+    ]
+  },
+  "saveType": "reflex",
+  "saveResults": {
+    "applyEffectOn": [
+      "failure",
+      "criticalFailure"
+    ],
+    "createEffect": true,
+    "effectType": "generic-sustaining"
+  },
+  "effects": [
+    {
+      "target": "enemy",
+      "name": "Stumbling Curse (Effect)",
+      "slug": "stumbling-curse",
+      "description": "You are affected by Stumbling Curse. {{casterName}} is sustaining this effect.",
+      "duration": {
+        "value": 10,
+        "unit": "rounds",
+        "sustained": false
+      },
+      "level": "castLevel"
+    }
+  ],
+  "maxSustainRounds": 10,
+  "sustainBehavior": "standard"
+}

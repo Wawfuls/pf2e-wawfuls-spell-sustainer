@@ -8,11 +8,11 @@ export class PF2eHUDSustainedSpellsIntegration {
 
   init() {
     if (!game.modules.get('pf2e-hud')?.active) {
-      console.log('[PF2e Spell Sustainer] PF2e HUD not active, skipping integration');
+      // PF2e HUD not active, skipping integration
       return;
     }
 
-    console.log('[PF2e Spell Sustainer] Initializing PF2e HUD integration');
+    // Initializing PF2e HUD integration
     this.enabled = true;
     this.setupHooks();
   }
@@ -230,7 +230,7 @@ export class PF2eHUDSustainedSpellsIntegration {
         try {
           canvas.ping(token.center, { color: pingColor });
         } catch (e) {
-          console.log('Ping failed:', e);
+          // Ping failed
         }
         
         // Mark as highlighted by this effect
@@ -264,10 +264,12 @@ export class PF2eHUDSustainedSpellsIntegration {
     
     // Handle sustain behaviors using generic dispatcher
     const { dispatchSustainBehavior } = await import('../sustain/sustain-dispatcher.js');
-    await dispatchSustainBehavior(spellType, effect, actor);
+    const sustainResult = await dispatchSustainBehavior(spellType, effect, actor);
     
-    // Output a chat card
-    await this.createSustainChatMessage(actor, effect);
+    // Only create chat message if sustain was successful (not blocked)
+    if (sustainResult !== false) {
+      await this.createSustainChatMessage(actor, effect);
+    }
   }
 
   async createSustainChatMessage(actor, effect) {
@@ -288,7 +290,7 @@ export class PF2eHUDSustainedSpellsIntegration {
           desc = originalSpell.system?.description?.value || '';
         }
       } catch (e) {
-        console.log('Could not fetch original spell description:', e);
+        // Could not fetch original spell description
       }
     }
     
@@ -297,10 +299,10 @@ export class PF2eHUDSustainedSpellsIntegration {
     // Add special behavior notes to chat
     let specialNote = '';
     const spellType = sustainedSpellData?.spellType;
-    if (spellType === 'forbidding-ward') {
-      specialNote = '<br/><em>Sustaining added 1 round to target effects.</em>';
-    } else if (spellType === 'self-aura') {
-      specialNote = `<br/><em>Aura size increased by 10 feet.</em>`;
+    if (spellType === 'self-aura') {
+      // Get aura increment from spell config if available
+      const increment = sustainedSpellData?.auraIncrement || 10;
+      specialNote = `<br/><em>Aura size increased by ${increment} feet.</em>`;
     }
     
     ChatMessage.create({

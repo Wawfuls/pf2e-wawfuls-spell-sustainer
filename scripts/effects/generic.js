@@ -2,11 +2,12 @@
 
 import { extractCastLevel } from '../core/utils.js';
 
-// Create generic sustained effects for spells without specific configurations
-export async function createSustainedEffects(spell, caster, validTargets, msg, ctx) {
+// Create sustained effects for spells, using config when available
+export async function createSustainedEffects(spell, caster, validTargets, msg, ctx, config = null) {
   const castLevel = extractCastLevel(msg, ctx, spell);
   
-  console.log(`[PF2e Spell Sustainer] Creating generic sustained effects for ${spell.name} at level ${castLevel}`);
+  const effectType = config ? 'configured' : 'generic';
+  // Creating sustained effects
   
   // Create effects on all targets
   const effectsToCreate = [];
@@ -16,32 +17,50 @@ export async function createSustainedEffects(spell, caster, validTargets, msg, c
     const targetActor = target.actor;
     const relationship = getActorRelationship(targetActor, caster);
     
-    // Create effect on target
-    const targetEffectData = {
-      type: 'effect',
-      name: `${spell.name}`,
-      img: spell.img,
-      system: {
-        description: { value: spell.system?.description?.value || '' },
-        duration: { value: 10, unit: 'rounds', sustained: false, expiry: 'turn-end' },
-        start: { value: game.combat ? game.combat.round : 0, initiative: null },
-        level: { value: castLevel }
-      },
-      flags: {
-        world: {
-          sustainedBy: { effectUuid: null }, // Will be updated after sustaining effect is created
-          sustainedSpell: {
-            spellUuid: spell.uuid,
-            spellName: spell.name,
-            casterUuid: caster.uuid,
-            createdFromChat: msg.id,
-            spellType: 'generic'
+    // Check if we have config-defined effects
+    if (config?.effects && config.effects.length > 0) {
+      // Create config-defined effects
+      for (const effectConfig of config.effects) {
+        // Check if this effect applies to this target type
+        if (!effectAppliesToTarget(effectConfig, target, caster)) {
+          // Effect doesn't apply to this target
+          continue;
+        }
+        
+        // Creating effect for target
+        
+        // Create the effect data from config
+        const targetEffectData = createEffectFromConfig(effectConfig, spell, caster, target, castLevel, msg);
+        effectsToCreate.push({ actor: targetActor, effect: targetEffectData });
+      }
+    } else {
+      // Create generic effect
+      const targetEffectData = {
+        type: 'effect',
+        name: `${spell.name}`,
+        img: spell.img,
+        system: {
+          description: { value: spell.system?.description?.value || '' },
+          duration: { value: 10, unit: 'rounds', sustained: false, expiry: 'turn-end' },
+          start: { value: game.combat ? game.combat.round : 0, initiative: null },
+          level: { value: castLevel }
+        },
+        flags: {
+          world: {
+            sustainedBy: { effectUuid: null }, // Will be updated after sustaining effect is created
+            sustainedSpell: {
+              spellUuid: spell.uuid,
+              spellName: spell.name,
+              casterUuid: caster.uuid,
+              createdFromChat: msg.id,
+              spellType: 'generic'
+            }
           }
         }
-      }
-    };
-    
-    effectsToCreate.push({ actor: targetActor, effect: targetEffectData });
+      };
+      
+      effectsToCreate.push({ actor: targetActor, effect: targetEffectData });
+    }
     
     // Store target data
     targetData.targets.push({
@@ -97,7 +116,7 @@ export async function createSustainedEffects(spell, caster, validTargets, msg, c
     await actor.createEmbeddedDocuments('Item', [effect]);
   }
   
-  console.log(`[PF2e Spell Sustainer] Applied generic sustained effects for ${spell.name} to ${validTargets.length} targets`);
+  // Applied sustained effects to targets
 }
 
 // Determine relationship between actor and caster
@@ -112,4 +131,83 @@ function getActorRelationship(actor, caster) {
   }
   
   return 'neutral';
+}
+
+/**
+ * Check if an effect should apply to a specific target
+ */
+function effectAppliesToTarget(effectConfig, target, caster) {
+  if (!effectConfig.target) return true; // No restriction
+  
+  switch (effectConfig.target) {
+    case 'self':
+      return target.actor.id === caster.id;
+    case 'ally':
+      return target.document?.disposition === 1 || target.actor.id === caster.id;
+    case 'enemy':
+      return target.document?.disposition === -1;
+    case 'neutral':
+      return target.document?.disposition === 0;
+    case 'all':
+    default:
+      return true;
+  }
+}
+
+/**
+ * Create effect data from configuration
+ */
+function createEffectFromConfig(effectConfig, spell, caster, target, castLevel, originalMsg) {
+  // Process template variables in description
+  let description = effectConfig.description || '';
+  description = description.replace(/\{\{casterName\}\}/g, caster.name);
+  description = description.replace(/\{\{targetName\}\}/g, target.name || target.actor?.name);
+  description = description.replace(/\{\{spellName\}\}/g, spell.name);
+  
+  // Determine effect level
+  let effectLevel = 1;
+  if (effectConfig.level === 'castLevel') {
+    effectLevel = castLevel;
+  } else if (typeof effectConfig.level === 'number') {
+    effectLevel = effectConfig.level;
+  }
+  
+  // Create basic effect data
+  const effectData = {
+    name: effectConfig.name,
+    type: 'effect',
+    img: spell.img,
+    system: {
+      description: {
+        value: description
+      },
+      level: {
+        value: effectLevel
+      },
+      duration: effectConfig.duration || { value: 10, unit: 'rounds', sustained: false },
+      start: { value: game.combat ? game.combat.round : 0, initiative: null },
+      traits: {
+        value: ['magical']
+      }
+    },
+    flags: {
+      world: {
+        sustainedBy: { effectUuid: null }, // Will be updated after sustaining effect is created
+        sustainedSpell: {
+          spellUuid: spell.uuid,
+          spellName: spell.name,
+          casterUuid: caster.uuid,
+          createdFromChat: originalMsg.id,
+          fromConfig: true
+        }
+      }
+    }
+  };
+  
+  // Add slug if provided
+  if (effectConfig.slug) {
+    effectData.system.slug = effectConfig.slug;
+  }
+  
+  return effectData;
 }

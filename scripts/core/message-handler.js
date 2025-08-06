@@ -6,37 +6,29 @@ import { parseSaveResult, checkIfSpellRequiresSave } from './utils.js';
 export async function handleSustainedSpellCast(msg, options, userId) {
   // Only let the GM handle effect creation to avoid duplicate processing
   if (!game.user.isGM) {
-    console.log(`[PF2e Spell Sustainer] Non-GM user skipping spell processing to avoid duplicates`);
+    // Non-GM users skip processing to avoid duplicates
     return;
   }
   
-  console.log(`[PF2e Spell Sustainer] Processing chat message:`, {
-    messageId: msg.id,
-    speaker: msg.speaker,
-    hasFlags: !!msg.flags?.pf2e,
-    content: msg.content?.substring(0, 100) + '...'
-  });
+  // Process chat message for spell sustaining
   
   // Only proceed if this is a spell cast message (not damage or other effects)
   const ctx = msg.flags?.pf2e?.context;
   const origin = msg.flags?.pf2e?.origin;
   
-  console.log(`[PF2e Spell Sustainer] Message analysis:`, {
-    contextType: ctx?.type,
-    contextAction: ctx?.action,
-    originType: origin?.type,
-    hasContext: !!ctx,
-    hasOrigin: !!origin
-  });
+  // Analyze message type and context
+  
+  // Skip if this is a sustain message (not an original cast)
+  if (msg.flags?.world?.sustainMessage) {
+    return;
+  }
   
   // Check if this is actually a spell cast (not damage, saves, or other effects)
   const isSpellCast = (ctx?.type === 'spell-cast') || 
                      (ctx?.type === 'spell' && ctx?.action === 'cast') ||
                      (origin?.type === 'spell' && !ctx?.type); // Initial spell cast without specific context type
   
-  console.log(`[PF2e Spell Sustainer] Is spell cast: ${isSpellCast}`);
   if (!isSpellCast) {
-    console.log(`[PF2e Spell Sustainer] Not a spell cast, returning`);
     return;
   }
   
@@ -49,14 +41,14 @@ export async function handleSustainedSpellCast(msg, options, userId) {
       !roll.formula?.includes('d20') // Not a d20 roll (which would be an attack or save)
     );
     if (hasDamageRoll) {
-      console.log(`[PF2e Spell Sustainer] Skipping damage roll message for spell`);
+      // Skip damage roll messages
       return;
     }
   }
   
   // Skip if this is a saving throw result
   if (ctx?.type === 'saving-throw' || msg.flags?.pf2e?.modifierMessage) {
-    console.log(`[PF2e Spell Sustainer] Skipping saving throw message`);
+    // Skip saving throw messages
     return;
   }
 
@@ -75,16 +67,7 @@ export async function handleSustainedSpellCast(msg, options, userId) {
   if (!caster) return;
   
   // Debug: Log that we detected a valid spell cast
-  console.log(`[PF2e Spell Sustainer] Detected initial spell cast: ${spell.name}`);
-  console.log(`[PF2e Spell Sustainer] Spell cast context:`, {
-    contextType: ctx?.type,
-    contextAction: ctx?.action,
-    originType: origin?.type,
-    hasRolls: !!msg.rolls?.length,
-    rollFormulas: msg.rolls?.map(r => r.formula) || [],
-    spellName: spell.name,
-    casterName: caster.name
-  });
+  // Detected spell cast
 
   // Get targets
   let targets = [];
@@ -102,7 +85,7 @@ export async function handleSustainedSpellCast(msg, options, userId) {
 }
 
 // Handle spells that require saving throws by monitoring chat for save results
-export async function handleSaveDependentSpell(spell, caster, validTargets, originalMsg, ctx) {
+export async function handleSaveDependentSpell(spell, caster, validTargets, originalMsg, ctx, config) {
   // Create a hook to monitor for saving throw results
   const hookId = `sustainSaveMonitor_${originalMsg.id}`;
   
@@ -113,6 +96,7 @@ export async function handleSaveDependentSpell(spell, caster, validTargets, orig
     originalTargets: validTargets,
     originalMsg,
     ctx,
+    config,
     saveResults: new Map(), // actor ID -> save result
     timeoutId: null,
     completed: false // Flag to prevent multiple executions
@@ -135,7 +119,7 @@ export async function handleSaveDependentSpell(spell, caster, validTargets, orig
   monitorData.timeoutId = setTimeout(() => {
     if (monitorData.completed) return; // Already handled
     
-    console.log(`[PF2e Spell Sustainer] Timeout reached for ${spell.name}, no save results detected. Cancelling sustained effect creation.`);
+    // Timeout reached for save results
     ui.notifications.warn(`No saving throw results detected for ${spell.name} within 30 seconds. Sustained effects not created.`);
     
     cleanupMonitoring();
@@ -149,7 +133,7 @@ export async function handleSaveDependentSpell(spell, caster, validTargets, orig
     const saveResult = parseSaveResult(chatMsg, monitorData.originalTargets);
     if (!saveResult) return;
 
-    console.log(`[PF2e Spell Sustainer] Found save result for ${saveResult.actorName}: ${saveResult.result}`);
+    // Save result found
     monitorData.saveResults.set(saveResult.actorId, saveResult);
 
     // Check if we have save results for all targets
@@ -163,7 +147,7 @@ export async function handleSaveDependentSpell(spell, caster, validTargets, orig
       // Check if the caster still exists and doesn't already have a sustaining effect for this spell
       const currentCaster = game.actors.get(caster.id);
       if (!currentCaster) {
-        console.log(`[PF2e Spell Sustainer] Caster no longer exists, cancelling sustained effect creation`);
+        // Caster no longer exists
         cleanupMonitoring();
         return;
       }
@@ -173,7 +157,7 @@ export async function handleSaveDependentSpell(spell, caster, validTargets, orig
       );
       
       if (existingSustain) {
-        console.log(`[PF2e Spell Sustainer] Sustaining effect already exists for this spell cast, skipping`);
+        // Sustaining effect already exists
         cleanupMonitoring();
         return;
       }
@@ -181,20 +165,26 @@ export async function handleSaveDependentSpell(spell, caster, validTargets, orig
       // All save results received, apply effects
       cleanupMonitoring();
 
-      // Filter targets to only those who failed their saves
-      const failedTargets = monitorData.originalTargets.filter(target => {
+      // Filter targets based on save results and config requirements
+      const applicableTargets = monitorData.originalTargets.filter(target => {
         const saveResult = monitorData.saveResults.get(target.actor.id);
-        return saveResult && (saveResult.result === 'failure' || saveResult.result === 'criticalFailure');
+        if (!saveResult) return false;
+        
+        // Check if this save result should trigger effects based on config
+        if (config?.saveResults?.applyEffectOn) {
+          return config.saveResults.applyEffectOn.includes(saveResult.result);
+        }
+        
+        // Default behavior: apply on failure/critical failure
+        return saveResult.result === 'failure' || saveResult.result === 'criticalFailure';
       });
 
-      if (failedTargets.length > 0) {
-        console.log(`[PF2e Spell Sustainer] Applying sustained effects to ${failedTargets.length} targets who failed saves`);
-        const { createSustainedEffects } = await import('../effects/generic.js');
-        await createSustainedEffects(spell, caster, failedTargets, originalMsg, ctx);
-      } else {
-        console.log(`[PF2e Spell Sustainer] No targets failed their saves for ${spell.name}`);
-        ui.notifications.info(`No targets failed their saves for ${spell.name}. No sustained effects created.`);
-      }
+      if (applicableTargets.length > 0) {
+              const { createSustainedEffects } = await import('../effects/generic.js');
+      await createSustainedEffects(spell, caster, applicableTargets, originalMsg, ctx, config);
+    } else {
+      ui.notifications.info(`No targets met the criteria for sustained effects for ${spell.name}.`);
+    }
     }
   };
 
