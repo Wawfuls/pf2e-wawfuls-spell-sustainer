@@ -294,8 +294,8 @@ export async function handleInitialTemplatePlace(caster, sustainingEffect, spell
     isInitialCast: true
   };
   
-
-  
+  // With the updated message handler, this function should now be called by the casting user
+  // So we can proceed directly with template placement
   await placeTemplate(spellName, templateConfig, sustainingEffect, rangeConstraints);
 }
 
@@ -350,7 +350,18 @@ export async function handleTemplatedSustain(caster, sustainingEffect, spellConf
   if (existingTemplateId2) {
     const existingTemplate2 = canvas.templates.get(existingTemplateId2);
     if (existingTemplate2) {
-      await existingTemplate2.document.delete();
+      try {
+        await existingTemplate2.document.delete();
+      } catch (deleteError) {
+        console.warn(`[PF2e Spell Sustainer] Could not delete old template directly, requesting GM assistance:`, deleteError);
+        // Use socket to request GM delete the template
+        game.socket.emit('module.pf2e-wawfuls-spell-sustainer', {
+          type: 'deleteTemplate',
+          templateId: existingTemplateId2
+        });
+        // Wait for the deletion to process
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
     }
   }
   
@@ -360,16 +371,39 @@ export async function handleTemplatedSustain(caster, sustainingEffect, spellConf
   // Standard sustain behavior - increment duration by 1 round
   const maxRounds = sustainingEffect.flags?.world?.sustainedSpell?.maxSustainRounds || 10;
   const curRounds = sustainingEffect.system?.duration?.value || 0;
-  await sustainingEffect.update({
+  const updateData = {
     'system.duration.value': Math.min(curRounds + 1, maxRounds),
     'flags.world.sustainedThisTurn': true
-  });
+  };
+  
+  try {
+    await sustainingEffect.update(updateData);
+  } catch (updateError) {
+    console.warn(`[PF2e Spell Sustainer] Could not update sustaining effect directly, requesting GM assistance:`, updateError);
+    // Use socket to request GM update the effect
+    game.socket.emit('module.pf2e-wawfuls-spell-sustainer', {
+      type: 'updateSustainingEffect',
+      effectUuid: sustainingEffect.uuid,
+      updateData: updateData
+    });
+  }
   
   return true; // Indicate successful sustain
 }
 
 // Shared template placement logic
 async function placeTemplate(spellName, templateConfig, sustainingEffect, rangeConstraints = {}) {
+  // Get the caster actor to determine user permissions
+  const caster = sustainingEffect.parent;
+  if (!caster) {
+    console.error(`[PF2e Spell Sustainer] No caster found for sustaining effect`);
+    return;
+  }
+  
+  // Find the user who owns/controls this actor
+  const casterUser = game.users.find(u => u.character?.id === caster.id) || 
+                     game.users.find(u => caster.testUserPermission(u, "OWNER"));
+  
   // Create visual range indicators
   let rangeIndicatorCleanup = null;
   
@@ -420,7 +454,7 @@ async function placeTemplate(spellName, templateConfig, sustainingEffect, rangeC
     angle: templateConfig.angle || 0,
     width: templateConfig.width || 0,
     direction: 0,
-    fillColor: game.user.color || "#FF0000"
+    fillColor: (casterUser?.color || game.user.color || "#FF0000")
   };
 
   // Add PF2e flags if we have the spell item
@@ -470,13 +504,23 @@ async function placeTemplate(spellName, templateConfig, sustainingEffect, rangeC
     
     try {
       // Link the template to our sustaining effect
-      await templateDoc.update({
-        'flags.world.sustainedBy': sustainingEffect.uuid
-      });
-      
-      await sustainingEffect.update({
-        'flags.world.sustainedSpell.templateId': templateDoc.id
-      });
+      try {
+        await templateDoc.update({
+          'flags.world.sustainedBy': sustainingEffect.uuid
+        });
+        
+        await sustainingEffect.update({
+          'flags.world.sustainedSpell.templateId': templateDoc.id
+        });
+      } catch (linkError) {
+        console.warn(`[PF2e Spell Sustainer] Could not link template directly, requesting GM assistance:`, linkError);
+        // If not GM, send a socket message to have GM do the linking
+        game.socket.emit('module.pf2e-wawfuls-spell-sustainer', {
+          type: 'linkTemplate',
+          templateId: templateDoc.id,
+          sustainingEffectUuid: sustainingEffect.uuid
+        });
+      }
       
       // Clean up visual indicators
       if (rangeIndicatorCleanup) {
@@ -491,9 +535,13 @@ async function placeTemplate(spellName, templateConfig, sustainingEffect, rangeC
     }
   });
   
-  // Start Foundry's interactive template placement using the template layer
+    // Start Foundry's interactive template placement
   try {
-    // Use the template layer's built-in placement workflow
+    // Only proceed if this is the caster or GM
+    // For non-caster players, they shouldn't be triggering template placement anyway
+    // since sustain should only be available to the caster
+    
+    // If current user is the caster or GM, proceed with template placement
     const templateLayer = canvas.templates;
     
     // Create a template placement workflow similar to spell casting
@@ -508,6 +556,8 @@ async function placeTemplate(spellName, templateConfig, sustainingEffect, rangeC
       
     } else {
       // Fallback: try direct creation with user notification
+      ui.notifications.info(`Click on the canvas to place the ${spellName} template.`);
+      
       // Set up a one-time click listener for template placement
       const placeTemplateClick = async (event) => {
         const pos = event.data.getLocalPosition(canvas.app.stage);
@@ -527,32 +577,47 @@ async function placeTemplate(spellName, templateConfig, sustainingEffect, rangeC
             parent: canvas.scene
           });
           
-          await sustainingEffect.update({
-            'flags.world.sustainedSpell.templateId': templateDoc.id
-          });
+          // Link template to sustaining effect
+          try {
+            await sustainingEffect.update({
+              'flags.world.sustainedSpell.templateId': templateDoc.id
+            });
+          } catch (linkError) {
+            console.warn(`[PF2e Spell Sustainer] Could not link template directly, requesting GM assistance:`, linkError);
+            // Send socket message for GM to link
+            game.socket.emit('module.pf2e-wawfuls-spell-sustainer', {
+              type: 'linkTemplate',
+              templateId: templateDoc.id,
+              sustainingEffectUuid: sustainingEffect.uuid
+            });
+          }
           
           // Template placed
         } catch (createError) {
           console.error(`[PF2e Spell Sustainer] Failed to create template:`, createError);
+          ui.notifications.error(`Failed to create template for ${spellName}: ${createError.message}`);
         }
         
-        // Remove the click listener
+        // Remove the click listener and cleanup
         canvas.app.stage.off('click', placeTemplateClick);
+        if (rangeIndicatorCleanup) rangeIndicatorCleanup();
       };
       
       // Add click listener
       canvas.app.stage.once('click', placeTemplateClick);
       
-      // Add timeout cleanup in case user cancels (10 seconds)
+      // Add timeout cleanup in case user cancels (30 seconds)
       setTimeout(() => {
         canvas.app.stage.off('click', placeTemplateClick);
         if (rangeIndicatorCleanup) rangeIndicatorCleanup();
-  
-      }, 10000);
+        ui.notifications.warn(`Template placement for ${spellName} timed out.`);
+      }, 30000);
     }
   } catch (error) {
     console.error(`[PF2e Spell Sustainer] Failed to start template placement:`, error);
+    ui.notifications.error(`Failed to start template placement for ${spellName}: ${error.message}`);
     // Cleanup visual indicators on error
     if (rangeIndicatorCleanup) rangeIndicatorCleanup();
   }
 }
+

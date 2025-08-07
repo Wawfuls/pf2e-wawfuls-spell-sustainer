@@ -4,17 +4,46 @@ import { parseSaveResult, checkIfSpellRequiresSave } from './utils.js';
 
 // Handle sustained spell casting logic
 export async function handleSustainedSpellCast(msg, options, userId) {
-  // Only let the GM handle effect creation to avoid duplicate processing
-  if (!game.user.isGM) {
-    // Non-GM users skip processing to avoid duplicates
-    return;
-  }
+  // Get caster information early to determine who should process this
+  const casterId = msg.speaker?.actor;
+  const caster = game.actors.get(casterId);
+  
+  // Find the user who cast this spell
+  const casterUser = game.users.find(u => u.character?.id === caster?.id) || 
+                     game.users.find(u => caster?.testUserPermission(u, "OWNER"));
   
   // Process chat message for spell sustaining
   
   // Only proceed if this is a spell cast message (not damage or other effects)
   const ctx = msg.flags?.pf2e?.context;
   const origin = msg.flags?.pf2e?.origin;
+  
+  // Check if this is a templated spell to determine processing priority
+  const checkSpellUuid = ctx?.item?.uuid || origin?.uuid;
+  let isTemplatedSpell = false;
+  
+  if (checkSpellUuid) {
+    const checkSpell = await fromUuid(checkSpellUuid);
+    if (checkSpell && checkSpell.type === 'spell') {
+      const { getSpellConfig } = await import('../spells/spell-dispatcher.js');
+      const config = await getSpellConfig(checkSpell.name.toLowerCase());
+      isTemplatedSpell = config?.sustainBehavior === 'templated';
+    }
+  }
+  
+  // For templated spells: ONLY the casting user should process (to enable direct template placement)
+  // For other spells: ONLY the GM should process (to avoid duplicates)
+  if (isTemplatedSpell) {
+    // Only casting user processes templated spells
+    if (!casterUser || casterUser.id !== game.user.id) {
+      return;
+    }
+  } else {
+    // Only GM processes non-templated spells
+    if (!game.user.isGM) {
+      return;
+    }
+  }
   
   // Analyze message type and context
   
@@ -61,17 +90,25 @@ export async function handleSustainedSpellCast(msg, options, userId) {
   // Check for the 'sustain' trait
   // if (!spell.system?.duration?.sustained) return;
 
-  // Get the caster
-  const casterId = msg.speaker?.actor;
-  const caster = game.actors.get(casterId);
+  // Caster was already validated earlier
   if (!caster) return;
+  
+  // Prevent duplicate processing - only GM or the casting user should create effects
+  // Check if sustaining effect already exists for this spell cast
+  const existingSustain = caster.itemTypes.effect.find(e => 
+    e.flags?.world?.sustainedSpell?.createdFromChat === msg.id
+  );
+  
+  if (existingSustain) {
+    // Effect already exists, skip processing
+    return;
+  }
   
   // Debug: Log that we detected a valid spell cast
   // Detected spell cast
 
   // Get targets
   let targets = [];
-  const casterUser = game.users.find(u => u.character?.id === caster.id) || game.users.find(u => u.name === msg.speaker?.alias);
   if (casterUser) {
     targets = Array.from(casterUser.targets);
   }

@@ -26,6 +26,9 @@ Hooks.once('ready', () => {
   positionedPanelIntegration = new PositionedPanelSustainedSpellsIntegration();
   positionedPanelIntegration.init();
   
+  // Set up socket communication for template operations
+  game.socket.on('module.pf2e-wawfuls-spell-sustainer', handleSocketMessage);
+  
       // All integrations initialized
 });
 
@@ -207,13 +210,80 @@ Hooks.on('updateItem', (item, data, options, userId) => {
   }
 });
 
+// Socket message handler for operations
+async function handleSocketMessage(data) {
+  try {
+    switch (data.type) {
+      case 'linkTemplate':
+        // Only GM should process linking operations
+        if (!game.user.isGM) return;
+        
+        // Link a template to a sustaining effect
+        const templateDoc = canvas.templates.get(data.templateId);
+        const linkingSustainingEffect = await fromUuid(data.sustainingEffectUuid);
+        
+        if (templateDoc && linkingSustainingEffect) {
+          await templateDoc.update({
+            'flags.world.sustainedBy': data.sustainingEffectUuid
+          });
+          
+          await linkingSustainingEffect.update({
+            'flags.world.sustainedSpell.templateId': data.templateId
+          });
+        }
+        break;
+        
+      case 'deleteTemplate':
+        // Only GM should process deletion operations
+        if (!game.user.isGM) return;
+        
+        // Delete a template as part of sustain operation
+        const oldTemplate = canvas.templates.get(data.templateId);
+        if (oldTemplate) {
+          await oldTemplate.document.delete();
+        }
+        break;
+        
+      case 'updateSustainingEffect':
+        // Only GM should process effect updates
+        if (!game.user.isGM) return;
+        
+        // Update sustaining effect duration/flags
+        const effect = await fromUuid(data.effectUuid);
+        if (effect) {
+          await effect.update(data.updateData);
+        }
+        break;
+        
+      case 'updateAuraEffect':
+        // Only GM should process aura effect updates
+        if (!game.user.isGM) return;
+        
+        // Update aura effect badge value
+        const auraEffect = await fromUuid(data.effectUuid);
+        if (auraEffect) {
+          await auraEffect.update({
+            'system.badge.value': data.badgeValue
+          });
+        }
+        break;
+        
+
+        
+
+    }
+  } catch (error) {
+    console.error(`[PF2e Spell Sustainer] Socket message error:`, error);
+  }
+}
+
 // Expose global API for macros and other modules
 window.PF2eWawfulsSpellSustainer = {
   showSustainDialog: showSustainDialog,
   hudIntegration: () => hudIntegration,
   positionedPanel: () => positionedPanelIntegration,
   dispatchSpell: dispatchSpell,
-  version: '0.4.0-dev'
+  version: '0.4.2'
 };
 
   // API exposed to global window
